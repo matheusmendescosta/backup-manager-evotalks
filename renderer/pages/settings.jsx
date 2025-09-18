@@ -5,6 +5,8 @@ export default function Settings() {
   const [instanceUrl, setInstanceUrl] = React.useState('');
   const [apiKey, setApiKey] = React.useState('');
   const [downloadPath, setDownloadPath] = React.useState('');
+  const [backupTime, setBackupTime] = React.useState('00:00');
+  const [autoBackup, setAutoBackup] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [success, setSuccess] = React.useState('');
   const [error, setError] = React.useState('');
@@ -15,6 +17,8 @@ export default function Settings() {
         setInstanceUrl(config.instanceUrl || '');
         setApiKey(config.apiKey || '');
         setDownloadPath(config.downloadPath || '');
+        setBackupTime(config.backupTime || '00:00');
+        setAutoBackup(!!config.autoBackup);
       }
       setLoading(false);
     });
@@ -29,8 +33,14 @@ export default function Settings() {
       return;
     }
     try {
-      await window.ipc.invoke('save-config', { instanceUrl, apiKey, downloadPath });
+      await window.ipc.invoke('save-config', { instanceUrl, apiKey, downloadPath, backupTime, autoBackup });
       setSuccess('Configuração atualizada com sucesso!');
+      // Aqui você pode disparar um evento para agendar o backup no processo principal, se necessário
+      if (autoBackup) {
+        await window.ipc.invoke('schedule-backup', { backupTime });
+      } else {
+        await window.ipc.invoke('cancel-scheduled-backup');
+      }
     } catch {
       setError('Erro ao salvar configurações.');
     }
@@ -82,6 +92,27 @@ export default function Settings() {
                 />
                 <button type="button" onClick={handleChooseFolder}>Escolher</button>
               </div>
+            </label>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label>
+              <strong>Horário do Backup Diário:</strong>
+              <input
+                type="time"
+                value={backupTime}
+                onChange={e => setBackupTime(e.target.value)}
+                style={{ width: '100%', padding: 8, marginTop: 4, border: '1px solid #ccc' }}
+              />
+            </label>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={autoBackup}
+                onChange={e => setAutoBackup(e.target.checked)}
+              />
+              Fazer download do backup todo dia nesse horário
             </label>
           </div>
           <button type="submit" style={{ width: '100%', padding: 10, marginBottom: 10 }}>

@@ -3,6 +3,8 @@ import { app, ipcMain, dialog } from 'electron'
 import fs from 'fs'
 import serve from 'electron-serve'
 import { createWindow } from './helpers'
+import fetch from 'node-fetch'
+import schedule from 'node-schedule'
 
 const isProd = process.env.NODE_ENV === 'production'
 
@@ -45,6 +47,73 @@ ipcMain.handle('save-file', async (_event, { chatId, buffer }) => {
   }
   const filePath = path.join(downloadPath, `chat_${chatId}.zip`)
   fs.writeFileSync(filePath, Buffer.from(buffer))
+  return true
+})
+
+let scheduledJob = null
+
+function getConfig() {
+  const configPath = path.join(app.getPath('userData'), 'config.json')
+  if (fs.existsSync(configPath)) {
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+  }
+  return {}
+}
+
+async function downloadBackups() {
+  const config = getConfig()
+  if (!config.apiKey || !config.instanceUrl || !config.downloadPath) return
+
+  // 1. Buscar todos os chatIds encerrados ontem
+  const idsRes = await fetch(
+    `https://${config.instanceUrl}/int/getAllChatsClosedYesterday`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: config.apiKey }),
+    }
+  )
+  if (!idsRes.ok) return
+  const chatIds = await idsRes.json()
+  if (!Array.isArray(chatIds) || chatIds.length === 0) return
+
+  // 2. Baixar cada backup
+  for (const chatId of chatIds) {
+    try {
+      const backupRes = await fetch(
+        `https://${config.instanceUrl}/int/backupChat`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey: config.apiKey, id: chatId }),
+        }
+      )
+      if (!backupRes.ok) continue
+      const buffer = Buffer.from(await backupRes.arrayBuffer())
+      const filePath = path.join(config.downloadPath, `chat_${chatId}.zip`)
+      fs.writeFileSync(filePath, buffer)
+    } catch (err) {
+      // Você pode logar o erro se quiser
+      console.log(`Erro ao baixar backup do chat ${chatId}:`, err)
+    }
+  }
+}
+
+// Agendamento
+ipcMain.handle('schedule-backup', async (_event, { backupTime }) => {
+  if (scheduledJob) scheduledJob.cancel()
+  // backupTime no formato "HH:mm"
+  const [hour, minute] = backupTime.split(':').map(Number)
+  scheduledJob = schedule.scheduleJob(
+    { hour, minute, tz: 'America/Sao_Paulo' },
+    downloadBackups
+  )
+  return true
+})
+
+ipcMain.handle('cancel-scheduled-backup', async () => {
+  if (scheduledJob) scheduledJob.cancel()
+  scheduledJob = null
   return true
 })
 
