@@ -92,7 +92,15 @@ async function downloadBackups() {
       )
       if (!backupRes.ok) continue
       const buffer = Buffer.from(await backupRes.arrayBuffer())
-      const filePath = path.join(config.downloadPath, `chat_${chatId}.zip`)
+
+      // Cria a pasta com a data do download (YYYY-MM-DD)
+      const dateFolder = new Date().toISOString().slice(0, 10)
+      const datedPath = path.join(config.downloadPath, dateFolder)
+      if (!fs.existsSync(datedPath)) {
+        fs.mkdirSync(datedPath, { recursive: true })
+      }
+
+      const filePath = path.join(datedPath, `chat_${chatId}.zip`)
       fs.writeFileSync(filePath, buffer)
     } catch (err) {
       // Você pode logar o erro se quiser
@@ -148,10 +156,16 @@ ipcMain.handle('cancel-scheduled-monthly-backup', async () => {
   if (scheduledMonthlyJob) scheduledMonthlyJob.cancel()
   scheduledMonthlyJob = null
   return true
-})
+});
 
-;(async () => {
+(async () => {
   await app.whenReady()
+
+  // Iniciar com o Windows
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    path: app.getPath('exe'),
+  })
 
   const mainWindow = createWindow('main', {
     width: 1000,
