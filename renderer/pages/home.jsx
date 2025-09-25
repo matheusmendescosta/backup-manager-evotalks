@@ -47,40 +47,54 @@ export default function HomePage() {
       <Head>
         <title>Configuração - Nextron</title>
       </Head>
-      <div style={{ maxWidth: 360, margin: '80px auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
-        <h2>Configuração Inicial</h2>
-        <form onSubmit={handleSave}>
-          <div style={{ marginBottom: 12 }}>
-            <label>
-              Link da Instância:
-              <input
-                type="text"
-                value={instanceUrl}
-                onChange={e => setInstanceUrl(e.target.value)}
-                style={{ width: '100%', padding: 8, marginTop: 4 }}
-                placeholder="https://sua-instancia.com"
-                autoFocus
-              />
-            </label>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+        <div className="w-full max-w-md p-8 border border-green-200 rounded-2xl shadow-lg bg-white">
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-3 shadow">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-green-700 mb-1">Configuração Inicial</h2>
+            <p className="text-green-600 text-sm text-center">Preencha os dados para conectar sua instância</p>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <label>
-              API Global:
-              <input
-                type="text"
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                style={{ width: '100%', padding: 8, marginTop: 4 }}
-                placeholder="Chave da API"
-              />
-            </label>
-          </div>
-          <button type="submit" style={{ width: '100%', padding: 10 }} disabled={loading}>
-            {loading ? 'Carregando...' : 'Salvar'}
-          </button>
-        </form>
-        {error && <p style={{ color: 'red', marginTop: 12 }}>{error}</p>}
-        {saved && <p style={{ color: 'green', marginTop: 12 }}>Configuração salva com sucesso!</p>}
+          <form onSubmit={handleSave} className="space-y-5">
+            <div>
+              <label className="block text-green-800 font-medium mb-1">
+                Link da Instância:
+                <input
+                  type="text"
+                  value={instanceUrl}
+                  onChange={e => setInstanceUrl(e.target.value)}
+                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  placeholder="https://sua-instancia.com"
+                  autoFocus
+                />
+              </label>
+            </div>
+            <div>
+              <label className="block text-green-800 font-medium mb-1">
+                API Global:
+                <input
+                  type="text"
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  placeholder="Chave da API"
+                />
+              </label>
+            </div>
+            <button
+              type="submit"
+              className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition disabled:opacity-60"
+              disabled={loading}
+            >
+              {loading ? 'Carregando...' : 'Salvar'}
+            </button>
+          </form>
+          {error && <p className="text-red-600 mt-4 text-center">{error}</p>}
+          {saved && <p className="text-green-600 mt-4 text-center">Configuração salva com sucesso!</p>}
+        </div>
       </div>
     </React.Fragment>
   )

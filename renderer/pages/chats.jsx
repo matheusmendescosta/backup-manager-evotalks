@@ -85,45 +85,50 @@ export default function Chats() {
     };
 
     return (
-        <div>
-            <h2>Chats Encerrados Ontem</h2>
-            {loading && <div style={{ marginTop: 20 }}>Carregando...</div>}
-            {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
-            {!loading && chatsDetail.length > 0 && (
-                <div style={{ marginTop: 20 }}>
-                    <strong>Detalhes dos Chats:</strong>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-                        <thead>
-                            <tr>
-                                <th style={{ border: '1px solid #ccc', padding: 8 }}>ID</th>
-                                <th style={{ border: '1px solid #ccc', padding: 8 }}>Cliente</th>
-                                <th style={{ border: '1px solid #ccc', padding: 8 }}>Download</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {chatsDetail.map(({ id, clientName }) => (
-                                <tr key={id}>
-                                    <td style={{ border: '1px solid #ccc', padding: 8, verticalAlign: 'top' }}>{id}</td>
-                                    <td style={{ border: '1px solid #ccc', padding: 8 }}>
-                                        {clientName}
-                                    </td>
-                                    <td style={{ border: '1px solid #ccc', padding: 8 }}>
-                                        <button
-                                            onClick={() => handleDownload(id)}
-                                            disabled={downloadingId === id}
-                                            style={{ padding: '4px 12px' }}
-                                        >
-                                            {downloadingId === id ? 'Baixando...' : 'Download'}
-                                        </button>
-                                    </td>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 to-green-100 py-10">
+            <div className="w-full max-w-3xl bg-white border border-green-200 rounded-2xl shadow-lg p-8">
+                <h2 className="text-2xl font-bold text-green-700 mb-6 text-center">Chats Encerrados Ontem</h2>
+                {loading && <div className="text-green-700 text-center mt-6">Carregando...</div>}
+                {error && <div className="text-red-600 text-center mt-4">{error}</div>}
+                {!loading && chatsDetail.length > 0 && (
+                    <div className="overflow-x-auto mt-4">
+                        <table className="min-w-full border border-green-200 rounded-lg overflow-hidden">
+                            <thead className="bg-green-100">
+                                <tr>
+                                    <th className="px-4 py-2 text-green-800 font-semibold border-b border-green-200">ID</th>
+                                    <th className="px-4 py-2 text-green-800 font-semibold border-b border-green-200">Cliente</th>
+                                    <th className="px-4 py-2 text-green-800 font-semibold border-b border-green-200">Download</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {chatsDetail.map(({ id, clientName }) => (
+                                    <tr key={id} className="hover:bg-green-50 transition">
+                                        <td className="px-4 py-2 border-b border-green-100 text-green-900">{id}</td>
+                                        <td className="px-4 py-2 border-b border-green-100 text-green-900">{clientName}</td>
+                                        <td className="px-4 py-2 border-b border-green-100">
+                                            <button
+                                                onClick={() => handleDownload(id)}
+                                                disabled={downloadingId === id}
+                                                className={`px-4 py-1 rounded font-medium transition 
+                                                    ${downloadingId === id
+                                                        ? 'bg-green-300 text-green-900 cursor-not-allowed'
+                                                        : 'bg-green-600 text-white hover:bg-green-700'
+                                                    }`}
+                                            >
+                                                {downloadingId === id ? 'Baixando...' : 'Download'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+                <div className="mt-8 text-center">
+                    <Link href="/settings" className="text-green-600 underline hover:text-green-800 font-medium">
+                        Ir para Configurações
+                    </Link>
                 </div>
-            )}
-            <div style={{ marginTop: 24 }}>
-                <Link href="/settings">Ir para Configurações</Link>
             </div>
         </div>
     );

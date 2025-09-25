@@ -51,6 +51,8 @@ ipcMain.handle('save-file', async (_event, { chatId, buffer }) => {
 })
 
 let scheduledJob = null
+let scheduledWeeklyJob = null
+let scheduledMonthlyJob = null
 
 function getConfig() {
   const configPath = path.join(app.getPath('userData'), 'config.json')
@@ -102,7 +104,6 @@ async function downloadBackups() {
 // Agendamento
 ipcMain.handle('schedule-backup', async (_event, { backupTime }) => {
   if (scheduledJob) scheduledJob.cancel()
-  // backupTime no formato "HH:mm"
   const [hour, minute] = backupTime.split(':').map(Number)
   scheduledJob = schedule.scheduleJob(
     { hour, minute, tz: 'America/Sao_Paulo' },
@@ -114,6 +115,38 @@ ipcMain.handle('schedule-backup', async (_event, { backupTime }) => {
 ipcMain.handle('cancel-scheduled-backup', async () => {
   if (scheduledJob) scheduledJob.cancel()
   scheduledJob = null
+  return true
+})
+
+ipcMain.handle('schedule-weekly-backup', async (_event, { weeklyDay, backupTime }) => {
+  if (scheduledWeeklyJob) scheduledWeeklyJob.cancel()
+  const [hour, minute] = backupTime.split(':').map(Number)
+  scheduledWeeklyJob = schedule.scheduleJob(
+    { dayOfWeek: Number(weeklyDay), hour, minute, tz: 'America/Sao_Paulo' },
+    downloadBackups
+  )
+  return true
+})
+
+ipcMain.handle('cancel-scheduled-weekly-backup', async () => {
+  if (scheduledWeeklyJob) scheduledWeeklyJob.cancel()
+  scheduledWeeklyJob = null
+  return true
+})
+
+ipcMain.handle('schedule-monthly-backup', async (_event, { monthlyDay, backupTime }) => {
+  if (scheduledMonthlyJob) scheduledMonthlyJob.cancel()
+  const [hour, minute] = backupTime.split(':').map(Number)
+  scheduledMonthlyJob = schedule.scheduleJob(
+    { date: Number(monthlyDay), hour, minute, tz: 'America/Sao_Paulo' },
+    downloadBackups
+  )
+  return true
+})
+
+ipcMain.handle('cancel-scheduled-monthly-backup', async () => {
+  if (scheduledMonthlyJob) scheduledMonthlyJob.cancel()
+  scheduledMonthlyJob = null
   return true
 })
 
