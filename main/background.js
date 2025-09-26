@@ -68,20 +68,21 @@ async function downloadBackups() {
   const config = getConfig()
   if (!config.apiKey || !config.instanceUrl || !config.downloadPath) return
 
-  // 1. Buscar todos os chatIds encerrados ontem
+  // 1. Buscar todos os chatIds encerrados usando o novo endpoint
   const idsRes = await fetch(
-    `https://${config.instanceUrl}/int/getAllChatsClosedYesterday`,
+    `https://webhook.evotalks.evotalks.io/webhook/atendimentos/encerrados?url=https://${config.instanceUrl}`,
     {
-      method: 'POST',
+      method: 'GET',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: config.apiKey }),
     }
   )
   if (!idsRes.ok) return
-  const chatIds = await idsRes.json()
+  const idsObj = await idsRes.json()
+  const chatIds = Array.isArray(idsObj.chats) ? idsObj.chats : []
   if (!Array.isArray(chatIds) || chatIds.length === 0) return
 
   // 2. Baixar cada backup
+  const chatsleft = []
   for (const chatId of chatIds) {
     try {
       const backupRes = await fetch(
@@ -92,7 +93,10 @@ async function downloadBackups() {
           body: JSON.stringify({ apiKey: config.apiKey, id: chatId }),
         }
       )
-      if (!backupRes.ok) continue
+      if (!backupRes.ok) {
+        chatsleft.push(chatId)
+        continue
+      }
       const buffer = Buffer.from(await backupRes.arrayBuffer())
 
       // Cria a pasta com a data do download (YYYY-MM-DD)
@@ -102,12 +106,28 @@ async function downloadBackups() {
         fs.mkdirSync(datedPath, { recursive: true })
       }
 
+      // Salva o arquivo como vem do servidor, sem zip
       const filePath = path.join(datedPath, `chat_${chatId}.zip`)
       fs.writeFileSync(filePath, buffer)
     } catch (err) {
-      // Você pode logar o erro se quiser
+      chatsleft.push(chatId)
       console.log(`Erro ao baixar backup do chat ${chatId}:`, err)
     }
+  }
+
+  // 3. Notificar endpoint após todos os downloads
+  try {
+    await fetch('https://webhook.evotalks.evotalks.io/webhook/atendimentos/encerrados', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+      url: 'https://' + config.instanceUrl,
+      chats: chatIds,
+      chatsleft: chatsleft,
+      }),
+    })
+  } catch (err) {
+    console.log('Erro ao notificar endpoint de encerrados:', err)
   }
 }
 
@@ -129,78 +149,78 @@ ipcMain.handle('schedule-weekly-backup', async (_event, { weeklyDay, backupTime 
   return true
 })
 
-;(async () => {
-  await app.whenReady()
+  ; (async () => {
+    await app.whenReady()
 
-  // Iniciar com o Windows
-  app.setLoginItemSettings({
-    openAtLogin: true,
-    path: app.getPath('exe'),
-  })
+    // Iniciar com o Windows
+    app.setLoginItemSettings({
+      openAtLogin: true,
+      path: app.getPath('exe'),
+    })
 
-  mainWindow = createWindow('main', {
-    width: 1000,
-    height: 600,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-    },
-  })
-
-  // Ícone da bandeja (ajuste o caminho conforme seu projeto)
-  const trayIcon = isProd
-    ? path.join(process.resourcesPath, 'logo.png')
-    : path.join(__dirname, '../renderer/public/images/logo.png')
-
-  tray = new Tray(trayIcon)
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Mostrar',
-      click: () => {
-        if (mainWindow) {
-          mainWindow.show()
-          mainWindow.focus()
-        }
+    mainWindow = createWindow('main', {
+      width: 1000,
+      height: 600,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
       },
-    },
-    {
-      label: 'Sair',
-      click: () => {
-        app.isQuiting = true
-        app.quit()
+    })
+
+    // Ícone da bandeja (ajuste o caminho conforme seu projeto)
+    const trayIcon = isProd
+      ? path.join(process.resourcesPath, 'logo.png')
+      : path.join(__dirname, '../renderer/public/images/logo.png')
+
+    tray = new Tray(trayIcon)
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Mostrar',
+        click: () => {
+          if (mainWindow) {
+            mainWindow.show()
+            mainWindow.focus()
+          }
+        },
       },
-    },
-  ])
-  tray.setToolTip('Backup Manager')
-  tray.setContextMenu(contextMenu)
+      {
+        label: 'Sair',
+        click: () => {
+          app.isQuiting = true
+          app.quit()
+        },
+      },
+    ])
+    tray.setToolTip('Backup Manager')
+    tray.setContextMenu(contextMenu)
 
-  tray.on('double-click', () => {
-    if (mainWindow) {
-      mainWindow.show()
-      mainWindow.focus()
-    }
-  })
+    tray.on('double-click', () => {
+      if (mainWindow) {
+        mainWindow.show()
+        mainWindow.focus()
+      }
+    })
 
-  mainWindow.on('minimize', (event) => {
-    event.preventDefault()
-    mainWindow.hide()
-  })
-
-  mainWindow.on('close', (event) => {
-    if (!app.isQuiting) {
+    mainWindow.on('minimize', (event) => {
       event.preventDefault()
       mainWindow.hide()
-    }
-    return false
-  })
+    })
 
-  if (isProd) {
-    await mainWindow.loadURL('app://./home')
-  } else {
-    const port = process.argv[2]
-    await mainWindow.loadURL(`http://localhost:${port}/home`)
-    mainWindow.webContents.openDevTools()
-  }
-})()
+    mainWindow.on('close', (event) => {
+      if (!app.isQuiting) {
+        event.preventDefault()
+        mainWindow.hide()
+      }
+      return false
+    })
+
+    if (isProd) {
+      await mainWindow.loadURL('app://./home')
+    } else {
+      const port = process.argv[2]
+      await mainWindow.loadURL(`http://localhost:${port}/home`)
+      mainWindow.webContents.openDevTools()
+    }
+  })()
 
 app.on('window-all-closed', () => {
   // Não sair do app ao fechar todas as janelas, para manter na bandeja
