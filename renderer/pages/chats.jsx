@@ -86,8 +86,15 @@ export default function Chats() {
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 to-green-100 py-10">
+            {/* Cabeçalho personalizado */}
+            <header className="w-full max-w-3xl mb-8 flex items-center justify-between">
+                <h1 className="text-3xl font-extrabold text-green-800 tracking-tight">Backup Manager Evotalks</h1>
+                <Link href="/settings" className="text-green-600 underline hover:text-green-800 font-medium">
+                    Configurações
+                </Link>
+            </header>
             <div className="w-full max-w-3xl bg-white border border-green-200 rounded-2xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-green-700 mb-6 text-center">Chats Encerrados Ontem</h2>
+                <h2 className="text-2xl font-bold text-green-700 mb-6 text-center">Histórico de conversas encerradas</h2>
                 {loading && <div className="text-green-700 text-center mt-6">Carregando...</div>}
                 {error && <div className="text-red-600 text-center mt-4">{error}</div>}
                 {!loading && chatsDetail.length > 0 && (
@@ -97,7 +104,7 @@ export default function Chats() {
                                 <tr>
                                     <th className="px-4 py-2 text-green-800 font-semibold border-b border-green-200">ID</th>
                                     <th className="px-4 py-2 text-green-800 font-semibold border-b border-green-200">Cliente</th>
-                                    <th className="px-4 py-2 text-green-800 font-semibold border-b border-green-200">Download</th>
+                                    <th className="px-4 py-2 text-green-800 font-semibold border-b border-green-200">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -105,7 +112,7 @@ export default function Chats() {
                                     <tr key={id} className="hover:bg-green-50 transition">
                                         <td className="px-4 py-2 border-b border-green-100 text-green-900">{id}</td>
                                         <td className="px-4 py-2 border-b border-green-100 text-green-900">{clientName}</td>
-                                        <td className="px-4 py-2 border-b border-green-100">
+                                        <td className="px-4 py-2 border-b border-green-100 flex gap-2">
                                             <button
                                                 onClick={() => handleDownload(id)}
                                                 disabled={downloadingId === id}
@@ -117,6 +124,12 @@ export default function Chats() {
                                             >
                                                 {downloadingId === id ? 'Baixando...' : 'Download'}
                                             </button>
+                                            <Link
+                                                href={`/chats/${id}`}
+                                                className="px-4 py-1 rounded font-medium bg-green-100 text-green-700 border border-green-300 hover:bg-green-200 transition"
+                                            >
+                                                Ver Conversa
+                                            </Link>
                                         </td>
                                     </tr>
                                 ))}

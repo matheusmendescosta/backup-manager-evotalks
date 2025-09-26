@@ -1,5 +1,5 @@
 import path from 'path'
-import { app, ipcMain, dialog } from 'electron'
+import { app, ipcMain, dialog, Tray, Menu } from 'electron'
 import fs from 'fs'
 import serve from 'electron-serve'
 import { createWindow } from './helpers'
@@ -15,6 +15,9 @@ if (isProd) {
 }
 
 const configPath = path.join(app.getPath('userData'), 'config.json')
+
+let tray = null
+let mainWindow = null
 
 ipcMain.handle('save-config', async (_event, data) => {
   fs.writeFileSync(configPath, JSON.stringify(data, null, 2))
@@ -135,12 +138,59 @@ ipcMain.handle('schedule-weekly-backup', async (_event, { weeklyDay, backupTime 
     path: app.getPath('exe'),
   })
 
-  const mainWindow = createWindow('main', {
+  mainWindow = createWindow('main', {
     width: 1000,
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
+  })
+
+  // Ícone da bandeja (ajuste o caminho conforme seu projeto)
+  const trayIcon = isProd
+    ? path.join(process.resourcesPath, 'logo.png')
+    : path.join(__dirname, '../renderer/public/images/logo.png')
+
+  tray = new Tray(trayIcon)
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Mostrar',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+      },
+    },
+    {
+      label: 'Sair',
+      click: () => {
+        app.isQuiting = true
+        app.quit()
+      },
+    },
+  ])
+  tray.setToolTip('Backup Manager')
+  tray.setContextMenu(contextMenu)
+
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+
+  mainWindow.on('minimize', (event) => {
+    event.preventDefault()
+    mainWindow.hide()
+  })
+
+  mainWindow.on('close', (event) => {
+    if (!app.isQuiting) {
+      event.preventDefault()
+      mainWindow.hide()
+    }
+    return false
   })
 
   if (isProd) {
@@ -153,7 +203,8 @@ ipcMain.handle('schedule-weekly-backup', async (_event, { weeklyDay, backupTime 
 })()
 
 app.on('window-all-closed', () => {
-  app.quit()
+  // Não sair do app ao fechar todas as janelas, para manter na bandeja
+  // app.quit()
 })
 
 ipcMain.on('message', async (event, arg) => {
