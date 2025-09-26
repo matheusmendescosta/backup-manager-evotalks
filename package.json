@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "evotalks-Backup-Manager",
+  "name": "evotalks-backup-manager",
   "description": "Gerenciador de Backups para Evotalks",
   "version": "1.0.0",
   "author": "Matheus Mendes <matheus.mendes@evotalks.com.br>",

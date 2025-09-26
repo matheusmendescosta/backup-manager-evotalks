@@ -2,29 +2,31 @@ import Link from 'next/link';
 import React from 'react';
 
 const weekDays = [
-  { value: '0', label: 'Domingo' },
   { value: '1', label: 'Segunda-feira' },
   { value: '2', label: 'Terça-feira' },
   { value: '3', label: 'Quarta-feira' },
   { value: '4', label: 'Quinta-feira' },
   { value: '5', label: 'Sexta-feira' },
   { value: '6', label: 'Sábado' },
+  { value: '0', label: 'Domingo' },
 ];
 
 export default function Settings() {
   const [instanceUrl, setInstanceUrl] = React.useState('');
   const [apiKey, setApiKey] = React.useState('');
   const [downloadPath, setDownloadPath] = React.useState('');
-  const [backupTime, setBackupTime] = React.useState('00:00');
   const [autoBackup, setAutoBackup] = React.useState(false);
 
-  // Novos estados para agendamento semanal/mensal
-  const [weeklyDay, setWeeklyDay] = React.useState('1');
-  const [weeklyTime, setWeeklyTime] = React.useState('00:00');
-  const [monthlyDay, setMonthlyDay] = React.useState('1');
-  const [monthlyTime, setMonthlyTime] = React.useState('00:00');
-  const [autoWeekly, setAutoWeekly] = React.useState(false);
-  const [autoMonthly, setAutoMonthly] = React.useState(false);
+  // Novo estado para dias da semana e horários
+  const [weekSchedule, setWeekSchedule] = React.useState({
+    '0': { enabled: false, time: '00:00' },
+    '1': { enabled: false, time: '00:00' },
+    '2': { enabled: false, time: '00:00' },
+    '3': { enabled: false, time: '00:00' },
+    '4': { enabled: false, time: '00:00' },
+    '5': { enabled: false, time: '00:00' },
+    '6': { enabled: false, time: '00:00' },
+  });
 
   const [loading, setLoading] = React.useState(true);
   const [success, setSuccess] = React.useState('');
@@ -36,18 +38,22 @@ export default function Settings() {
         setInstanceUrl(config.instanceUrl || '');
         setApiKey(config.apiKey || '');
         setDownloadPath(config.downloadPath || '');
-        setBackupTime(config.backupTime || '00:00');
         setAutoBackup(!!config.autoBackup);
-        setWeeklyDay(config.weeklyDay || '1');
-        setWeeklyTime(config.weeklyTime || '00:00');
-        setMonthlyDay(config.monthlyDay || '1');
-        setMonthlyTime(config.monthlyTime || '00:00');
-        setAutoWeekly(!!config.autoWeekly);
-        setAutoMonthly(!!config.autoMonthly);
+        if (config.weekSchedule) setWeekSchedule(config.weekSchedule);
       }
       setLoading(false);
     });
   }, []);
+
+  const handleWeekDayChange = (day, field, value) => {
+    setWeekSchedule((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: field === 'enabled' ? value : value || '00:00',
+      },
+    }));
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -62,30 +68,23 @@ export default function Settings() {
         instanceUrl,
         apiKey,
         downloadPath,
-        backupTime,
         autoBackup,
-        weeklyDay,
-        weeklyTime,
-        autoWeekly,
-        monthlyDay,
-        monthlyTime,
-        autoMonthly,
+        weekSchedule,
       });
       setSuccess('Configuração atualizada com sucesso!');
-      if (autoBackup) {
-        await window.ipc.invoke('schedule-backup', { backupTime });
-      } else {
+      // Cancela todos os agendamentos semanais antes de agendar novamente
+      await window.ipc.invoke('cancel-all-scheduled-weekly-backups');
+      // Agenda para cada dia selecionado
+      for (const day of Object.keys(weekSchedule)) {
+        if (weekSchedule[day].enabled) {
+          await window.ipc.invoke('schedule-weekly-backup', {
+            weeklyDay: day,
+            backupTime: weekSchedule[day].time,
+          });
+        }
+      }
+      if (!Object.values(weekSchedule).some((d) => d.enabled)) {
         await window.ipc.invoke('cancel-scheduled-backup');
-      }
-      if (autoWeekly) {
-        await window.ipc.invoke('schedule-weekly-backup', { weeklyDay, backupTime: weeklyTime });
-      } else {
-        await window.ipc.invoke('cancel-scheduled-weekly-backup');
-      }
-      if (autoMonthly) {
-        await window.ipc.invoke('schedule-monthly-backup', { monthlyDay, backupTime: monthlyTime });
-      } else {
-        await window.ipc.invoke('cancel-scheduled-monthly-backup');
       }
     } catch {
       setError('Erro ao salvar configurações.');
@@ -150,91 +149,46 @@ export default function Settings() {
               </label>
             </div>
             <div>
-              <label className="block text-green-800 font-medium mb-1">
-                Horário do Backup Diário:
-                <input
-                  type="time"
-                  value={backupTime}
-                  onChange={e => setBackupTime(e.target.value)}
-                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-                />
+              <label className="block text-green-800 font-medium mb-3">
+                <span>Agendamento de Backup:</span>
               </label>
-            </div>
-            <div>
-              <label className="flex items-center gap-2 text-green-800 font-medium">
-                <input
-                  type="checkbox"
-                  checked={autoBackup}
-                  onChange={e => setAutoBackup(e.target.checked)}
-                  className="accent-green-600"
-                />
-                Fazer download do backup todo dia nesse horário
-              </label>
-            </div>
-            {/* Agendamento semanal */}
-            <div className="border-t border-green-100 pt-4">
-              <label className="flex items-center gap-2 text-green-800 font-medium mb-2">
-                <input
-                  type="checkbox"
-                  checked={autoWeekly}
-                  onChange={e => setAutoWeekly(e.target.checked)}
-                  className="accent-green-600"
-                />
-                Fazer download do backup semanal automaticamente
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-green-700">Dia da semana:</span>
-                <select
-                  value={weeklyDay}
-                  onChange={e => setWeeklyDay(e.target.value)}
-                  className="px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-                  disabled={!autoWeekly}
-                >
-                  {weekDays.map(day => (
-                    <option key={day.value} value={day.value}>{day.label}</option>
+              <table className="w-full border border-green-200 rounded mb-2">
+                <thead>
+                  <tr className="bg-green-100">
+                    <th className="py-2 px-2 text-green-800 font-semibold">Ativar</th>
+                    <th className="py-2 px-2 text-green-800 font-semibold">Dia</th>
+                    <th className="py-2 px-2 text-green-800 font-semibold">Horário</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weekDays.map((day) => (
+                    <tr key={day.value} className="border-t border-green-100">
+                      <td className="py-2 px-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={weekSchedule[day.value].enabled}
+                          onChange={e =>
+                            handleWeekDayChange(day.value, 'enabled', e.target.checked)
+                          }
+                          className="accent-green-600"
+                        />
+                      </td>
+                      <td className="py-2 px-2 text-green-900">{day.label}</td>
+                      <td className="py-2 px-2 text-center">
+                        <input
+                          type="time"
+                          value={weekSchedule[day.value].time}
+                          onChange={e =>
+                            handleWeekDayChange(day.value, 'time', e.target.value)
+                          }
+                          className="px-2 py-1 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                          disabled={!weekSchedule[day.value].enabled}
+                        />
+                      </td>
+                    </tr>
                   ))}
-                </select>
-                <span className="text-green-700 ml-4">Horário:</span>
-                <input
-                  type="time"
-                  value={weeklyTime}
-                  onChange={e => setWeeklyTime(e.target.value)}
-                  className="px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-                  disabled={!autoWeekly}
-                />
-              </div>
-            </div>
-            {/* Agendamento mensal */}
-            <div className="border-t border-green-100 pt-4">
-              <label className="flex items-center gap-2 text-green-800 font-medium mb-2">
-                <input
-                  type="checkbox"
-                  checked={autoMonthly}
-                  onChange={e => setAutoMonthly(e.target.checked)}
-                  className="accent-green-600"
-                />
-                Fazer download do backup mensal automaticamente
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-green-700">Dia do mês:</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={31}
-                  value={monthlyDay}
-                  onChange={e => setMonthlyDay(e.target.value)}
-                  className="w-20 px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-                  disabled={!autoMonthly}
-                />
-                <span className="text-green-700 ml-4">Horário:</span>
-                <input
-                  type="time"
-                  value={monthlyTime}
-                  onChange={e => setMonthlyTime(e.target.value)}
-                  className="px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-                  disabled={!autoMonthly}
-                />
-              </div>
+                </tbody>
+              </table>
             </div>
             {error && <p className="text-red-600 text-center">{error}</p>}
             {success && <p className="text-green-600 text-center">{success}</p>}
