@@ -13,6 +13,9 @@ const handler = {
   },
   invoke(channel, ...args) {
     return ipcRenderer.invoke(channel, ...args)
+  },
+  getChatFiles(chatId) {
+    return ipcRenderer.invoke('get-chat-files', { chatId })
   }
 }
 

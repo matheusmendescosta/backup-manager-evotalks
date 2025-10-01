@@ -1,10 +1,11 @@
 import path from 'path'
-import { app, ipcMain, dialog, Tray, Menu } from 'electron'
+import { app, ipcMain, dialog, Tray, Menu, shell } from 'electron'
 import fs from 'fs'
 import serve from 'electron-serve'
 import { createWindow } from './helpers'
 import fetch from 'node-fetch'
 import schedule from 'node-schedule'
+import AdmZip from 'adm-zip'
 
 const isProd = process.env.NODE_ENV === 'production'
 
@@ -52,6 +53,58 @@ ipcMain.handle('save-file', async (_event, { chatId, buffer }) => {
   fs.writeFileSync(filePath, Buffer.from(buffer))
   return true
 })
+
+ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
+  const config = getConfig();
+  const baseFolder = config.downloadPath; // agora busca direto na raiz
+
+  // procura o arquivo zip ou txt relacionado ao chat
+  const files = fs.readdirSync(baseFolder).filter(f => f.includes(`chat_${chatId}`));
+
+  let txtContent = '';
+  let fileList = [];
+
+  for (const file of files) {
+    const filePath = path.join(baseFolder, file);
+
+    if (file.endsWith('.zip')) {
+      // extrair para uma pasta temporária dentro do downloadPath
+      const extractPath = path.join(baseFolder, `chat_${chatId}_extracted`);
+      if (!fs.existsSync(extractPath)) {
+        fs.mkdirSync(extractPath);
+        const zip = new AdmZip(filePath);
+        zip.extractAllTo(extractPath, true);
+      }
+
+      // listar arquivos extraídos
+      const extractedFiles = fs.readdirSync(extractPath);
+      for (const ef of extractedFiles) {
+        const efPath = path.join(extractPath, ef);
+        if (ef.endsWith('.txt')) {
+          txtContent = fs.readFileSync(efPath, 'utf-8');
+        } else {
+          fileList.push({ name: ef, type: path.extname(ef), path: efPath });
+        }
+      }
+    } else if (file.endsWith('.txt')) {
+      txtContent = fs.readFileSync(filePath, 'utf-8');
+    } else {
+      fileList.push({ name: file, type: path.extname(file), path: filePath });
+    }
+  }
+
+  return { txtContent, files: fileList };
+});
+
+ipcMain.handle("open-file", async (_event, filePath) => {
+  try {
+    await shell.openPath(filePath);
+    return true;
+  } catch (err) {
+    console.error("Erro ao abrir arquivo:", err);
+    return false;
+  }
+});
 
 // Apenas agendamentos semanais
 let scheduledWeeklyJobs = {}
@@ -121,9 +174,9 @@ async function downloadBackups() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-      url: 'https://' + config.instanceUrl,
-      chats: chatIds,
-      chatsleft: chatsleft,
+        url: 'https://' + config.instanceUrl,
+        chats: chatIds,
+        chatsleft: chatsleft,
       }),
     })
   } catch (err) {

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import React from 'react';
+import { useRouter } from 'next/router';
 
 export default function Chats() {
     const [apiKey, setApiKey] = React.useState('');
@@ -8,6 +9,8 @@ export default function Chats() {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState('');
     const [downloadingId, setDownloadingId] = React.useState(null);
+
+    const router = useRouter();
 
     React.useEffect(() => {
         // Carrega config e busca todos os chats encerrados ontem automaticamente
@@ -84,6 +87,16 @@ export default function Chats() {
         setDownloadingId(null);
     };
 
+    const handleViewConversation = async (chatId) => {
+        const result = await window.ipc.invoke('get-chat-files', { chatId });
+
+        // Salva no sessionStorage para recuperar depois
+        sessionStorage.setItem(`chat_${chatId}`, JSON.stringify(result));
+
+        router.push(`/chats/${chatId}`);
+    };
+
+
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 to-green-100 py-10">
             {/* Cabeçalho personalizado */}
@@ -124,12 +137,12 @@ export default function Chats() {
                                             >
                                                 {downloadingId === id ? 'Baixando...' : 'Download'}
                                             </button>
-                                            <Link
-                                                href={`/chats/${id}`}
+                                            <button
+                                                onClick={() => handleViewConversation(id)}
                                                 className="px-4 py-1 rounded font-medium bg-green-100 text-green-700 border border-green-300 hover:bg-green-200 transition"
                                             >
                                                 Ver Conversa
-                                            </Link>
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
