@@ -152,15 +152,8 @@ async function downloadBackups() {
       }
       const buffer = Buffer.from(await backupRes.arrayBuffer())
 
-      // Cria a pasta com a data do download (YYYY-MM-DD)
-      const dateFolder = new Date().toISOString().slice(0, 10)
-      const datedPath = path.join(config.downloadPath, dateFolder)
-      if (!fs.existsSync(datedPath)) {
-        fs.mkdirSync(datedPath, { recursive: true })
-      }
-
-      // Salva o arquivo como vem do servidor, sem zip
-      const filePath = path.join(datedPath, `chat_${chatId}.zip`)
+      // Salva o arquivo direto na pasta de download configurada
+      const filePath = path.join(config.downloadPath, `chat_${chatId}.zip`)
       fs.writeFileSync(filePath, buffer)
     } catch (err) {
       chatsleft.push(chatId)

@@ -16,6 +16,9 @@ export default function Settings() {
   const [apiKey, setApiKey] = React.useState('');
   const [downloadPath, setDownloadPath] = React.useState('');
   const [autoBackup, setAutoBackup] = React.useState(false);
+  // Add new states for email and phone
+  const [email, setEmail] = React.useState('');
+  const [phone, setPhone] = React.useState('');
 
   // Novo estado para dias da semana e horários
   const [weekSchedule, setWeekSchedule] = React.useState({
@@ -40,6 +43,9 @@ export default function Settings() {
         setDownloadPath(config.downloadPath || '');
         setAutoBackup(!!config.autoBackup);
         if (config.weekSchedule) setWeekSchedule(config.weekSchedule);
+        // Add new fields to useEffect
+        setEmail(config.email || '');
+        setPhone(config.phone || '');
       }
       setLoading(false);
     });
@@ -59,7 +65,7 @@ export default function Settings() {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!instanceUrl || !apiKey) {
+    if (!instanceUrl || !apiKey || !email || !phone) {
       setError('Preencha todos os campos.');
       return;
     }
@@ -70,6 +76,8 @@ export default function Settings() {
         downloadPath,
         autoBackup,
         weekSchedule,
+        email,
+        phone,
       });
       setSuccess('Configuração atualizada com sucesso!');
       // Cancela todos os agendamentos semanais antes de agendar novamente
@@ -125,6 +133,30 @@ export default function Settings() {
                   onChange={e => setApiKey(e.target.value)}
                   className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
                   placeholder="Chave da API"
+                />
+              </label>
+            </div>
+            <div>
+              <label className="block text-green-800 font-medium mb-1">
+                E-mail:
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  placeholder="seu@email.com"
+                />
+              </label>
+            </div>
+            <div>
+              <label className="block text-green-800 font-medium mb-1">
+                Telefone:
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  placeholder="(00) 00000-0000"
                 />
               </label>
             </div>
