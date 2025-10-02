@@ -123,17 +123,17 @@ async function downloadBackups() {
 
   // 1. Buscar todos os chatIds encerrados usando o novo endpoint
   const idsRes = await fetch(
-    `https://webhook.evotalks.evotalks.io/webhook/atendimentos/encerrados?url=https://${config.instanceUrl}`,
+    `https://${config.instanceUrl}/int/getAllChatsClosedYesterday`,
     {
-      method: 'GET',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: config.apiKey })
     }
   )
   if (!idsRes.ok) return
   const idsObj = await idsRes.json()
-  const chatIds = Array.isArray(idsObj.chats) ? idsObj.chats : []
-  if (!Array.isArray(chatIds) || chatIds.length === 0) return
-
+  const chatIds = idsObj || []
+  
   // 2. Baixar cada backup
   const chatsleft = []
   for (const chatId of chatIds) {
@@ -160,21 +160,6 @@ async function downloadBackups() {
       console.log(`Erro ao baixar backup do chat ${chatId}:`, err)
     }
   }
-
-  // 3. Notificar endpoint após todos os downloads
-  try {
-    await fetch('https://webhook.evotalks.evotalks.io/webhook/atendimentos/encerrados', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url: 'https://' + config.instanceUrl,
-        chats: chatIds,
-        chatsleft: chatsleft,
-      }),
-    })
-  } catch (err) {
-    console.log('Erro ao notificar endpoint de encerrados:', err)
-  }
 }
 
 // Agendamento semanal
@@ -196,98 +181,98 @@ ipcMain.handle('schedule-weekly-backup', async (_event, { weeklyDay, backupTime 
 })
 
 ipcMain.handle('check-chat-downloaded', async (_event, { chatId }) => {
-    const config = getConfig();
-    if (!config.downloadPath) return false;
+  const config = getConfig();
+  if (!config.downloadPath) return false;
 
-    // Check in the current date folder and root
-    const today = new Date().toISOString().slice(0, 10);
-    const todayPath = path.join(config.downloadPath, today);
-    
-    // Check in today's folder
-    if (fs.existsSync(todayPath)) {
-        const todayFiles = fs.readdirSync(todayPath);
-        if (todayFiles.some(f => f.includes(`chat_${chatId}`))) {
-            return true;
-        }
+  // Check in the current date folder and root
+  const today = new Date().toISOString().slice(0, 10);
+  const todayPath = path.join(config.downloadPath, today);
+
+  // Check in today's folder
+  if (fs.existsSync(todayPath)) {
+    const todayFiles = fs.readdirSync(todayPath);
+    if (todayFiles.some(f => f.includes(`chat_${chatId}`))) {
+      return true;
     }
-    
-    // Check in root folder
-    const rootFiles = fs.readdirSync(config.downloadPath);
-    return rootFiles.some(f => f.includes(`chat_${chatId}`));
+  }
+
+  // Check in root folder
+  const rootFiles = fs.readdirSync(config.downloadPath);
+  return rootFiles.some(f => f.includes(`chat_${chatId}`));
 });
 
-  ; (async () => {
-    await app.whenReady()
+; (async () => {
+  await app.whenReady()
 
-    // Iniciar com o Windows
-    app.setLoginItemSettings({
-      openAtLogin: true,
-      path: app.getPath('exe'),
-    })
+  // Iniciar com o Windows
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    path: app.getPath('exe'),
+  })
 
-    mainWindow = createWindow('main', {
-      width: 1000,
-      height: 600,
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
+  mainWindow = createWindow('main', {
+    width: 1000,
+    height: 600,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  })
+
+  // Ícone da bandeja (ajuste o caminho conforme seu projeto)
+  const trayIcon = isProd
+    ? path.join(process.resourcesPath, 'logo.png')
+    : path.join(__dirname, '../renderer/public/images/logo.png')
+
+  tray = new Tray(trayIcon)
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Mostrar',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
       },
-    })
-
-    // Ícone da bandeja (ajuste o caminho conforme seu projeto)
-    const trayIcon = isProd
-      ? path.join(process.resourcesPath, 'logo.png')
-      : path.join(__dirname, '../renderer/public/images/logo.png')
-
-    tray = new Tray(trayIcon)
-    const contextMenu = Menu.buildFromTemplate([
-      {
-        label: 'Mostrar',
-        click: () => {
-          if (mainWindow) {
-            mainWindow.show()
-            mainWindow.focus()
-          }
-        },
+    },
+    {
+      label: 'Sair',
+      click: () => {
+        app.isQuiting = true
+        app.quit()
       },
-      {
-        label: 'Sair',
-        click: () => {
-          app.isQuiting = true
-          app.quit()
-        },
-      },
-    ])
-    tray.setToolTip('Backup Manager')
-    tray.setContextMenu(contextMenu)
+    },
+  ])
+  tray.setToolTip('Backup Manager')
+  tray.setContextMenu(contextMenu)
 
-    tray.on('double-click', () => {
-      if (mainWindow) {
-        mainWindow.show()
-        mainWindow.focus()
-      }
-    })
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
 
-    mainWindow.on('minimize', (event) => {
+  mainWindow.on('minimize', (event) => {
+    event.preventDefault()
+    mainWindow.hide()
+  })
+
+  mainWindow.on('close', (event) => {
+    if (!app.isQuiting) {
       event.preventDefault()
       mainWindow.hide()
-    })
-
-    mainWindow.on('close', (event) => {
-      if (!app.isQuiting) {
-        event.preventDefault()
-        mainWindow.hide()
-      }
-      return false
-    })
-
-    if (isProd) {
-      await mainWindow.loadURL('app://./home')
-    } else {
-      const port = process.argv[2]
-      await mainWindow.loadURL(`http://localhost:${port}/home`)
-      mainWindow.webContents.openDevTools()
     }
-  })()
+    return false
+  })
+
+  if (isProd) {
+    await mainWindow.loadURL('app://./home')
+  } else {
+    const port = process.argv[2]
+    await mainWindow.loadURL(`http://localhost:${port}/home`)
+    mainWindow.webContents.openDevTools()
+  }
+})()
 
 app.on('window-all-closed', () => {
   // Não sair do app ao fechar todas as janelas, para manter na bandeja
