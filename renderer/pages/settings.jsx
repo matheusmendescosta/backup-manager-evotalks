@@ -112,7 +112,7 @@ export default function Settings() {
                   value={instanceUrl}
                   onChange={e => setInstanceUrl(e.target.value)}
                   className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-                  placeholder="https://sua-instancia.com"
+                  placeholder="sua-instancia.com"
                 />
               </label>
             </div>

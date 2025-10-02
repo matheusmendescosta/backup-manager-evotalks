@@ -1,6 +1,7 @@
 import React from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import Image from 'next/image'
 
 export default function HomePage() {
   const [instanceUrl, setInstanceUrl] = React.useState('');
@@ -45,15 +46,19 @@ export default function HomePage() {
   return (
     <React.Fragment>
       <Head>
-        <title>Configuração - Nextron</title>
+        <title>Evotalks - Backup Manager</title>
       </Head>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
         <div className="w-full max-w-md p-8 border border-green-200 rounded-2xl shadow-lg bg-white">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-3 shadow">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+            <div className="w-24 h-24 relative mb-3">
+              <Image
+                src="/images/logo.png"
+                alt="Evotalks Logo"
+                layout="fill"
+                objectFit="contain"
+                priority
+              />
             </div>
             <h2 className="text-2xl font-bold text-green-700 mb-1">Configuração Inicial</h2>
             <p className="text-green-600 text-sm text-center">Preencha os dados para conectar sua instância</p>
@@ -67,7 +72,7 @@ export default function HomePage() {
                   value={instanceUrl}
                   onChange={e => setInstanceUrl(e.target.value)}
                   className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-                  placeholder="https://sua-instancia.com"
+                  placeholder="sua-instância.evotalks.com.br"
                   autoFocus
                 />
               </label>
