@@ -17,8 +17,10 @@ if (isProd) {
 
 const configPath = path.join(app.getPath('userData'), 'config.json')
 
-let tray = null
-let mainWindow = null
+// Move these to top level for better management
+let mainWindow = null;
+let tray = null;
+let isQuiting = false;
 
 ipcMain.handle('save-config', async (_event, data) => {
   fs.writeFileSync(configPath, JSON.stringify(data, null, 2))
@@ -201,83 +203,107 @@ ipcMain.handle('check-chat-downloaded', async (_event, { chatId }) => {
   return rootFiles.some(f => f.includes(`chat_${chatId}`));
 });
 
-; (async () => {
-  await app.whenReady()
+;(async () => {
+  await app.whenReady();
 
-  // Iniciar com o Windows
   app.setLoginItemSettings({
     openAtLogin: true,
     path: app.getPath('exe'),
-  })
+  });
 
   mainWindow = createWindow('main', {
     width: 1000,
     height: 600,
+    show: false, // Start hidden
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
     },
-  })
+  });
 
-  // Ícone da bandeja (ajuste o caminho conforme seu projeto)
-  const trayIcon = isProd
-    ? path.join(process.resourcesPath, 'logo.png')
-    : path.join(__dirname, '../renderer/public/images/logo.png')
-
-  tray = new Tray(trayIcon)
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Mostrar',
-      click: () => {
-        if (mainWindow) {
-          mainWindow.show()
-          mainWindow.focus()
-        }
-      },
-    },
-    {
-      label: 'Sair',
-      click: () => {
-        app.isQuiting = true
-        app.quit()
-      },
-    },
-  ])
-  tray.setToolTip('Backup Manager')
-  tray.setContextMenu(contextMenu)
-
-  tray.on('double-click', () => {
-    if (mainWindow) {
-      mainWindow.show()
-      mainWindow.focus()
-    }
-  })
+  // Properly handle window states
+  mainWindow.on('ready-to-show', () => {
+    mainWindow.show();
+  });
 
   mainWindow.on('minimize', (event) => {
-    event.preventDefault()
-    mainWindow.hide()
-  })
+    event.preventDefault();
+    mainWindow.hide();
+  });
 
   mainWindow.on('close', (event) => {
-    if (!app.isQuiting) {
-      event.preventDefault()
-      mainWindow.hide()
+    if (!isQuiting) {
+      event.preventDefault();
+      mainWindow.hide();
+      return false;
     }
-    return false
-  })
+    return true;
+  });
 
-  if (isProd) {
-    await mainWindow.loadURL('app://./home')
-  } else {
-    const port = process.argv[2]
-    await mainWindow.loadURL(`http://localhost:${port}/home`)
-    mainWindow.webContents.openDevTools()
+  // Improved icon paths for production
+  const iconPath = isProd
+    ? path.join(process.resourcesPath, 'resources', 'icon.ico')
+    : path.join(__dirname, '..', 'resources', 'icon.ico');
+
+  try {
+    tray = new Tray(iconPath);
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Abrir',
+        click: () => {
+          mainWindow.show();
+          mainWindow.focus();
+        },
+      },
+      {
+        label: 'Sair',
+        click: () => {
+          isQuiting = true;
+          app.quit();
+        },
+      },
+    ]);
+
+    tray.setToolTip('Backup Manager Evotalks');
+    tray.setContextMenu(contextMenu);
+
+    tray.on('double-click', () => {
+      mainWindow.show();
+      mainWindow.focus();
+    });
+  } catch (err) {
+    console.error('Erro ao criar tray:', err);
   }
-})()
 
+  // Load the app
+  if (isProd) {
+    await mainWindow.loadURL('app://./home').catch(console.error);
+  } else {
+    const port = process.argv[2];
+    await mainWindow.loadURL(`http://localhost:${port}/home`).catch(console.error);
+    mainWindow.webContents.openDevTools();
+  }
+})();
+
+// Handle app events properly
 app.on('window-all-closed', () => {
-  // Não sair do app ao fechar todas as janelas, para manter na bandeja
-  // app.quit()
-})
+  if (process.platform !== 'darwin' && isQuiting) {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createWindow();
+  } else {
+    mainWindow.show();
+  }
+});
+
+app.on('before-quit', () => {
+  isQuiting = true;
+});
 
 ipcMain.on('message', async (event, arg) => {
   event.reply('message', `${arg} World!`)

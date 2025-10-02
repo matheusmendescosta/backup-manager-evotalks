@@ -55,8 +55,8 @@ export default function HomePage() {
               <Image
                 src="/images/logo.png"
                 alt="Evotalks Logo"
-                layout="fill"
-                objectFit="contain"
+                fill
+                style={{ objectFit: 'contain' }}
                 priority
               />
             </div>
