@@ -202,6 +202,27 @@ ipcMain.handle('schedule-weekly-backup', async (_event, { weeklyDay, backupTime 
   return true
 })
 
+ipcMain.handle('check-chat-downloaded', async (_event, { chatId }) => {
+    const config = getConfig();
+    if (!config.downloadPath) return false;
+
+    // Check in the current date folder and root
+    const today = new Date().toISOString().slice(0, 10);
+    const todayPath = path.join(config.downloadPath, today);
+    
+    // Check in today's folder
+    if (fs.existsSync(todayPath)) {
+        const todayFiles = fs.readdirSync(todayPath);
+        if (todayFiles.some(f => f.includes(`chat_${chatId}`))) {
+            return true;
+        }
+    }
+    
+    // Check in root folder
+    const rootFiles = fs.readdirSync(config.downloadPath);
+    return rootFiles.some(f => f.includes(`chat_${chatId}`));
+});
+
   ; (async () => {
     await app.whenReady()
 

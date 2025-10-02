@@ -56,71 +56,73 @@ export default function ChatPage() {
   }, [id]);
 
   return (
-    <div className="p-4 flex flex-col h-screen">
-      <h1 className="text-xl font-bold mb-4">Conversa #{id}</h1>
-
-      {/* Cabeçalho resumido */}
+    <div className="p-4 flex flex-col h-screen bg-gradient-to-br from-green-50 to-green-100">
       {header && (
-        <div className="bg-white shadow rounded-lg p-4 mb-4 border">
-          <p className="font-semibold">{header.meta}</p>
-          <p className="text-sm text-gray-600">{header.time}</p>
+        <div className="bg-white shadow rounded-lg p-4 mb-4 border border-green-200">
+          <p className="font-semibold text-green-800">{header.meta}</p>
+          <p className="text-sm text-green-600">{header.time}</p>
+          <Link
+            href="/chats"
+            className="text-green-600 underline hover:text-green-800 font-medium"
+          >
+            Voltar para Conversas
+          </Link>
         </div>
       )}
-
-      {/* Conteúdo principal: conversa + arquivos lado a lado */}
+      
       <div className="flex flex-1 gap-4 overflow-hidden">
-        {/* Área do chat */}
-        <div className="flex-1 bg-gray-50 rounded-lg p-3 overflow-y-auto flex flex-col space-y-2">
+        <div className="flex-1 bg-white rounded-lg p-3 overflow-y-auto flex flex-col space-y-2 border border-green-200">
           {messages.map((msg, i) => (
             <div
               key={i}
               className={`flex ${msg.sender === "Agente" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[70%] rounded-2xl p-3 shadow ${msg.sender === "Agente"
-                    ? "bg-blue-500 text-white rounded-br-none"
-                    : "bg-gray-200 text-black rounded-bl-none"
-                  }`}
+                className={`max-w-[70%] rounded-2xl p-3 shadow ${
+                  msg.sender === "Agente"
+                    ? "bg-green-600 text-white rounded-br-none"
+                    : "bg-green-100 text-green-900 rounded-bl-none"
+                }`}
               >
                 {msg.type === "file" ? (
                   <p className="text-sm italic">📎 {msg.text}</p>
                 ) : (
                   <p className="text-sm">{msg.text}</p>
                 )}
-                <span className="text-xs opacity-70 block mt-1">
+                <span className={`text-xs block mt-1 ${
+                  msg.sender === "Agente" ? "text-green-100" : "text-green-700"
+                }`}>
                   {msg.time} • {msg.from}
                 </span>
               </div>
             </div>
           ))}
         </div>
-
-        {/* Painel lateral de arquivos */}
         {files.length > 0 && (
-          <div className="w-1/3 flex flex-col bg-white shadow rounded-lg border">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg">Arquivos da conversa</h2>
+          <div className="w-1/3 flex flex-col bg-white shadow rounded-lg border border-green-200">
+            <div className="p-4 border-b border-green-200 bg-green-50">
+              <h2 className="font-semibold text-lg text-green-800">Arquivos da conversa</h2>
             </div>
-            <ul className="flex-1 overflow-y-auto divide-y divide-gray-200">
+            <ul className="flex-1 overflow-y-auto divide-y divide-green-100">
               {files.map((f, i) => {
                 const ext = f.name.split(".").pop()?.toLowerCase();
 
                 const getIcon = () => {
-                  if (["png", "jpg", "jpeg"].includes(ext || "")) return <Image className="w-5 h-5 text-green-500" />;
-                  if (["zip", "rar"].includes(ext || "")) return <FileArchive className="w-5 h-5 text-orange-500" />;
-                  if (ext === "txt") return <FileText className="w-5 h-5 text-blue-500" />;
-                  return <File className="w-5 h-5 text-gray-500" />;
+                  if (["png", "jpg", "jpeg"].includes(ext || "")) return <Image className="w-5 h-5 text-green-600" />;
+                  if (["zip", "rar"].includes(ext || "")) return <FileArchive className="w-5 h-5 text-green-600" />;
+                  if (ext === "txt") return <FileText className="w-5 h-5 text-green-600" />;
+                  return <File className="w-5 h-5 text-green-600" />;
                 };
 
                 return (
                   <li
                     key={i}
                     onClick={() => window.ipc.invoke("open-file", f.path)}
-                    className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition"
+                    className="flex items-center gap-3 p-3 hover:bg-green-50 cursor-pointer transition"
                   >
                     {getIcon()}
-                    <span className="flex-1 text-sm text-gray-800 truncate">{f.name}</span>
-                    <ExternalLink className="w-4 h-4 text-gray-400" />
+                    <span className="flex-1 text-sm text-green-800 truncate">{f.name}</span>
+                    <ExternalLink className="w-4 h-4 text-green-500" />
                   </li>
                 );
               })}
@@ -128,18 +130,6 @@ export default function ChatPage() {
           </div>
         )}
       </div>
-
-      <div className="mt-4 text-center">
-        <Link
-          href="/chats"
-          className="text-green-600 underline hover:text-green-800 font-medium"
-        >
-          Voltar para Conversas
-        </Link>
-      </div>
     </div>
-
-
-
   );
 }
