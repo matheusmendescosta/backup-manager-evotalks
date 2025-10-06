@@ -203,6 +203,31 @@ ipcMain.handle('check-chat-downloaded', async (_event, { chatId }) => {
   return rootFiles.some(f => f.includes(`chat_${chatId}`));
 });
 
+ipcMain.handle('get-downloaded-chats', async () => {
+  const config = getConfig();
+  if (!config.downloadPath) return [];
+
+  try {
+    const files = fs.readdirSync(config.downloadPath)
+      .filter(f => f.includes('chat_') && f.endsWith('.zip'));
+    
+    return files.map(file => {
+      const chatId = file.replace('chat_', '').replace('.zip', '');
+      const filePath = path.join(config.downloadPath, file);
+      const stats = fs.statSync(filePath);
+      
+      return {
+        id: chatId,
+        downloadDate: stats.mtime,
+        path: filePath
+      };
+    }).sort((a, b) => b.downloadDate - a.downloadDate); // Most recent first
+  } catch (err) {
+    console.error('Erro ao listar chats baixados:', err);
+    return [];
+  }
+});
+
 ;(async () => {
   await app.whenReady();
 

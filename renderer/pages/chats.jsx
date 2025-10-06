@@ -16,7 +16,7 @@ export default function Chats() {
 
     // Filtra os chats baseado na busca
     const filteredChats = React.useMemo(() => {
-        return chatsDetail.filter(chat => 
+        return chatsDetail.filter(chat =>
             chat.id.toString().includes(searchTerm.toLowerCase()) ||
             chat.clientName.toLowerCase().includes(searchTerm.toLowerCase())
         );
@@ -123,19 +123,23 @@ export default function Chats() {
         router.push(`/chats/${chatId}`);
     };
 
-
     return (
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-green-50 to-green-100 p-6">
             <header className="w-full max-w-6xl mx-auto mb-8 flex items-center justify-between">
                 <h1 className="text-3xl font-extrabold text-green-800 tracking-tight">Backup Manager Evotalks</h1>
-                <Link href="/settings" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                    Configurações
-                </Link>
+                <div className="flex gap-4">
+                    <Link href="/settings" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                        Configurações
+                    </Link>
+                    <Link href="/download-chats" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                        Histórico de downloads
+                    </Link>
+                </div>
             </header>
 
             <main className="w-full max-w-6xl mx-auto bg-white border border-green-200 rounded-2xl shadow-lg p-8">
                 <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold text-green-700">Histórico de conversas encerradas</h2>
+                    <h2 className="text-2xl font-bold text-green-700">Conversas encerradas ontem</h2>
                     <div className="relative">
                         <input
                             type="text"
@@ -190,11 +194,10 @@ export default function Chats() {
                                                 <button
                                                     onClick={() => handleDownload(id)}
                                                     disabled={downloadingId === id}
-                                                    className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                                        downloadingId === id
+                                                    className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${downloadingId === id
                                                             ? 'bg-green-100 text-green-900 cursor-not-allowed'
                                                             : 'bg-green-600 text-white hover:bg-green-700'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {downloadingId === id ? (
                                                         <>
@@ -211,11 +214,10 @@ export default function Chats() {
                                                 <button
                                                     onClick={() => handleViewConversation(id)}
                                                     disabled={!downloadedChats.includes(id)}
-                                                    className={`inline-flex items-center px-3 py-1.5 border border-green-300 rounded-md text-sm font-medium ${
-                                                        downloadedChats.includes(id)
+                                                    className={`inline-flex items-center px-3 py-1.5 border border-green-300 rounded-md text-sm font-medium ${downloadedChats.includes(id)
                                                             ? 'text-green-700 bg-green-50 hover:bg-green-100'
                                                             : 'text-gray-400 bg-gray-50 cursor-not-allowed'
-                                                    } transition-colors`}
+                                                        } transition-colors`}
                                                 >
                                                     Ver Conversa
                                                 </button>

@@ -234,7 +234,7 @@ export default function Settings() {
         )}
         <div className="mt-6 text-center">
           <span className="text-green-700">Voltar </span>
-          <Link href="/chats" className="text-green-600 underline hover:text-green-800 ml-1">
+          <Link href="/download-chats" className="text-green-600 underline hover:text-green-800 ml-1">
             Ir para Chat
           </Link>
         </div>
