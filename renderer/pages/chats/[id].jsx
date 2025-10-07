@@ -62,10 +62,10 @@ export default function ChatPage() {
           <p className="font-semibold text-green-800">{header.meta}</p>
           <p className="text-sm text-green-600">{header.time}</p>
           <Link
-            href="/chats"
+            href="/download-chats"
             className="text-green-600 underline hover:text-green-800 font-medium"
           >
-            Voltar para Conversas
+            Voltar para chats
           </Link>
         </div>
       )}
