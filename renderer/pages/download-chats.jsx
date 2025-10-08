@@ -10,6 +10,8 @@ export default function DownloadedChats() {
     const [searchTerm, setSearchTerm] = React.useState('');
     const [startDate, setStartDate] = React.useState('');
     const [endDate, setEndDate] = React.useState('');
+    const [currentPage, setCurrentPage] = React.useState(1);
+    const [itemsPerPage] = React.useState(10);
     const router = useRouter();
 
     React.useEffect(() => {
@@ -24,9 +26,9 @@ export default function DownloadedChats() {
             const response = await fetch(`https://${config.instanceUrl}/int/getGlobalChatDetail`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     apiKey: config.apiKey,
-                    chatId: chatId 
+                    chatId: chatId
                 }),
             });
 
@@ -51,7 +53,7 @@ export default function DownloadedChats() {
         try {
             const downloadedChats = await window.ipc.invoke('get-downloaded-chats');
             setChats(downloadedChats);
-            
+
             // Load details for each chat
             downloadedChats.forEach(chat => {
                 loadChatDetails(chat.id);
@@ -76,9 +78,9 @@ export default function DownloadedChats() {
         return chats.filter(chat => {
             const searchTermLower = searchTerm.toLowerCase();
             const clientDetails = chatDetails[chat.id] || {};
-            
+
             // Search by ID, client name or client number
-            const matchesSearch = 
+            const matchesSearch =
                 chat.id.toString().includes(searchTermLower) ||
                 clientDetails.clientName?.toLowerCase().includes(searchTermLower) ||
                 clientDetails.clientId?.toLowerCase().includes(searchTermLower);
@@ -114,6 +116,21 @@ export default function DownloadedChats() {
         setStartDate('');
         setEndDate('');
     };
+
+    // Add this function to handle page changes
+    const handlePageChange = (pageNumber) => {
+        setCurrentPage(pageNumber);
+    };
+
+    // Modify the filteredChats memo to include pagination
+    const paginatedChats = React.useMemo(() => {
+        const firstPageIndex = (currentPage - 1) * itemsPerPage;
+        const lastPageIndex = firstPageIndex + itemsPerPage;
+        return filteredChats.slice(firstPageIndex, lastPageIndex);
+    }, [filteredChats, currentPage, itemsPerPage]);
+
+    // Calculate total pages
+    const totalPages = Math.ceil(filteredChats.length / itemsPerPage);
 
     return (
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-green-50 to-green-100 p-6">
@@ -199,7 +216,7 @@ export default function DownloadedChats() {
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                         {error}
                     </div>
-                ) : filteredChats.length > 0 ? (
+                ) : paginatedChats.length > 0 ? (
                     <div className="overflow-x-auto rounded-lg border border-green-200">
                         <table className="w-full divide-y divide-green-200">
                             <colgroup>
@@ -221,7 +238,7 @@ export default function DownloadedChats() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-green-200">
-                                {filteredChats.map((chat) => (
+                                {paginatedChats.map((chat) => (
                                     <tr key={chat.id} className="hover:bg-green-50 transition-colors text-sm">
                                         <td className="px-2 py-2">{chat.id}</td>
                                         <td className="px-2 py-2 truncate" title={chatDetails[chat.id]?.clientName || '-'}>
@@ -231,7 +248,7 @@ export default function DownloadedChats() {
                                             {chatDetails[chat.id]?.clientId || '-'}
                                         </td>
                                         <td className="px-2 py-2">
-                                            {chatDetails[chat.id]?.beginTime ? 
+                                            {chatDetails[chat.id]?.beginTime ?
                                                 new Date(chatDetails[chat.id].beginTime).toLocaleDateString('pt-BR', {
                                                     day: '2-digit',
                                                     month: '2-digit',
@@ -240,7 +257,7 @@ export default function DownloadedChats() {
                                             }
                                         </td>
                                         <td className="px-2 py-2">
-                                            {chatDetails[chat.id]?.endTime ? 
+                                            {chatDetails[chat.id]?.endTime ?
                                                 new Date(chatDetails[chat.id].endTime).toLocaleDateString('pt-BR', {
                                                     day: '2-digit',
                                                     month: '2-digit',
@@ -264,6 +281,90 @@ export default function DownloadedChats() {
                 ) : (
                     <div className="text-center py-12">
                         <p className="text-green-800">Nenhum chat baixado encontrado</p>
+                    </div>
+                )}
+
+                {/* Pagination controls */}
+                {filteredChats.length > 0 && (
+                    <div className="mt-4 flex items-center justify-between px-2 py-3">
+                        <p className="text-sm text-green-700">
+                            {filteredChats.length} chats encontrados
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-green-600">
+                                Página {currentPage} de {totalPages}
+                            </span>
+
+                            <nav className="inline-flex rounded-md shadow-sm" aria-label="Pagination">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="relative inline-flex items-center px-2 py-1 rounded-l-md border border-green-300 bg-white text-sm text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" />
+                                    </svg>
+                                </button>
+
+                                {totalPages <= 7 ? (
+                                    // Show all pages if total is 7 or less
+                                    [...Array(totalPages)].map((_, i) => (
+                                        <button
+                                            key={i + 1}
+                                            onClick={() => handlePageChange(i + 1)}
+                                            className={`relative inline-flex items-center px-3 py-1 text-sm font-medium border-t border-b border-green-300 ${currentPage === i + 1
+                                                    ? 'bg-green-600 text-white border-green-600'
+                                                    : 'bg-white text-green-700 hover:bg-green-50'
+                                                }`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))
+                                ) : (
+                                    // Show condensed version for more than 7 pages
+                                    <>
+                                        {[1, 2, 3].map(num => (
+                                            <button
+                                                key={num}
+                                                onClick={() => handlePageChange(num)}
+                                                className={`relative inline-flex items-center px-3 py-1 text-sm font-medium border-t border-b border-green-300 ${currentPage === num
+                                                        ? 'bg-green-600 text-white border-green-600'
+                                                        : 'bg-white text-green-700 hover:bg-green-50'
+                                                    }`}
+                                            >
+                                                {num}
+                                            </button>
+                                        ))}
+                                        <span className="relative inline-flex items-center px-3 py-1 text-sm border-t border-b border-green-300 bg-white text-green-400">
+                                            ...
+                                        </span>
+                                        {[totalPages - 2, totalPages - 1, totalPages].map(num => (
+                                            <button
+                                                key={num}
+                                                onClick={() => handlePageChange(num)}
+                                                className={`relative inline-flex items-center px-3 py-1 text-sm font-medium border-t border-b border-green-300 ${currentPage === num
+                                                        ? 'bg-green-600 text-white border-green-600'
+                                                        : 'bg-white text-green-700 hover:bg-green-50'
+                                                    }`}
+                                            >
+                                                {num}
+                                            </button>
+                                        ))}
+                                    </>
+                                )}
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="relative inline-flex items-center px-2 py-1 rounded-r-md border border-green-300 bg-white text-sm text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </nav>
+                        </div>
                     </div>
                 )}
             </main>
