@@ -81,7 +81,7 @@ export default function HomePage() {
               <label className="block text-green-800 font-medium mb-1">
                 API Global:
                 <input
-                  type="text"
+                  type="password"
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
                   className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"

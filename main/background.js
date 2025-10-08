@@ -21,6 +21,7 @@ const configPath = path.join(app.getPath('userData'), 'config.json')
 let mainWindow = null;
 let tray = null;
 let isQuiting = false;
+let lastCleaningCheck = null; // Add this near the top with other state variables
 
 ipcMain.handle('save-config', async (_event, data) => {
   fs.writeFileSync(configPath, JSON.stringify(data, null, 2))
@@ -119,7 +120,70 @@ function getConfig() {
   return {}
 }
 
+// New function to check and handle cleaning
+async function checkAndHandleCleaning() {
+  const config = getConfig();
+  if (!config.apiKey || !config.instanceUrl || !config.downloadPath) return;
+
+  // Check if we already did cleaning today
+  const today = new Date().toISOString().slice(0, 10);
+  if (lastCleaningCheck === today) return;
+
+  try {
+    const cleaningRes = await fetch(
+      `https://${config.instanceUrl}/int/getNextCleaningInfo`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: config.apiKey }),
+      }
+    );
+
+    if (!cleaningRes.ok) return;
+    const cleaningInfo = await cleaningRes.json();
+
+    if (cleaningInfo.scheduled) {
+      console.log('Iniciando backup de limpeza:', cleaningInfo);
+      const { firstId, lastId } = cleaningInfo;
+
+      // Download all chats in range
+      for (let chatId = firstId; chatId <= lastId; chatId++) {
+        try {
+          const backupRes = await fetch(
+            `https://${config.instanceUrl}/int/backupChat`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ apiKey: config.apiKey, id: chatId }),
+            }
+          );
+
+          if (!backupRes.ok) continue;
+          const buffer = Buffer.from(await backupRes.arrayBuffer());
+          const filePath = path.join(config.downloadPath, `chat_${chatId}.zip`);
+          fs.writeFileSync(filePath, buffer);
+          
+          console.log(`Backup de limpeza do chat ${chatId} concluído`);
+        } catch (err) {
+          console.error(`Erro no backup de limpeza do chat ${chatId}:`, err);
+        }
+      }
+
+      // Mark as checked for today
+      lastCleaningCheck = today;
+      console.log('Backup de limpeza concluído');
+    }
+  } catch (err) {
+    console.error('Erro ao verificar limpeza:', err);
+  }
+}
+
+// Modificar a função downloadBackups existente
 async function downloadBackups() {
+  // First check for cleaning
+  await checkAndHandleCleaning();
+
+  // Then continue with regular backup
   const config = getConfig()
   if (!config.apiKey || !config.instanceUrl || !config.downloadPath) return
 
@@ -225,6 +289,29 @@ ipcMain.handle('get-downloaded-chats', async () => {
   } catch (err) {
     console.error('Erro ao listar chats baixados:', err);
     return [];
+  }
+});
+
+// Add this new IPC handler
+ipcMain.handle('get-cleaning-info', async () => {
+  const config = getConfig();
+  if (!config.apiKey || !config.instanceUrl) return null;
+
+  try {
+    const cleaningRes = await fetch(
+      `https://${config.instanceUrl}/int/getNextCleaningInfo`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: config.apiKey }),
+      }
+    );
+
+    if (!cleaningRes.ok) return null;
+    return await cleaningRes.json();
+  } catch (err) {
+    console.error('Erro ao verificar limpeza:', err);
+    return null;
   }
 });
 

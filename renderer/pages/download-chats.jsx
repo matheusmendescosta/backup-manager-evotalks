@@ -33,13 +33,13 @@ export default function DownloadedChats() {
             if (!response.ok) return;
             const data = await response.json();
 
-            console.log("Chat details data:", data)
-
             setChatDetails(prev => ({
                 ...prev,
                 [chatId]: {
                     clientName: data.clientName || 'N/A',
-                    clientId: data.clientId || 'N/A'
+                    clientId: data.clientId || 'N/A',
+                    beginTime: data.beginTime || 'N/A',
+                    endTime: data.endTime || 'N/A',
                 }
             }));
         } catch (err) {
@@ -71,6 +71,7 @@ export default function DownloadedChats() {
         router.push(`/chats/${chatId}`);
     };
 
+    // Update the filteredChats memo
     const filteredChats = React.useMemo(() => {
         return chats.filter(chat => {
             const searchTermLower = searchTerm.toLowerCase();
@@ -84,20 +85,24 @@ export default function DownloadedChats() {
 
             if (!matchesSearch) return false;
 
-            // Date filtering
+            // Date filtering - only using beginTime for both start and end dates
             if (startDate || endDate) {
-                const chatDate = new Date(chat.downloadDate);
+                const chatBeginTime = clientDetails.beginTime ? new Date(clientDetails.beginTime) : null;
+
+                if (!chatBeginTime) return false;
 
                 if (startDate) {
                     const start = new Date(startDate);
                     start.setHours(0, 0, 0, 0);
-                    if (chatDate < start) return false;
+                    // Chat should start on or after the start date
+                    if (chatBeginTime < start) return false;
                 }
 
                 if (endDate) {
                     const end = new Date(endDate);
                     end.setHours(23, 59, 59, 999);
-                    if (chatDate > end) return false;
+                    // Chat should have started on or before the end date
+                    if (chatBeginTime > end) return false;
                 }
             }
 
@@ -113,7 +118,7 @@ export default function DownloadedChats() {
     return (
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-green-50 to-green-100 p-6">
             <header className="w-full max-w-6xl mx-auto mb-8 flex items-center justify-between">
-                <h1 className="text-3xl font-extrabold text-green-800 tracking-tight">Chats Baixados</h1>
+                <h1 className="text-3xl font-extrabold text-green-800 tracking-tight">Evotalks – Gerenciador de Backup</h1>
                 <Link href="/settings" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
                     Configurações
                 </Link>
@@ -196,42 +201,59 @@ export default function DownloadedChats() {
                     </div>
                 ) : filteredChats.length > 0 ? (
                     <div className="overflow-x-auto rounded-lg border border-green-200">
-                        <table className="min-w-full divide-y divide-green-200 table-fixed">
+                        <table className="w-full divide-y divide-green-200">
                             <colgroup>
-                                <col style={{ width: '120px' }} />
-                                <col style={{ width: '220px' }} />
-                                <col style={{ width: '180px' }} />
-                                <col style={{ width: '180px' }} />
-                                <col style={{ width: '140px' }} />
+                                <col style={{ width: '70px' }} />   {/* ID - smaller */}
+                                <col style={{ width: '140px' }} />  {/* Cliente */}
+                                <col style={{ width: '110px' }} />  {/* Número */}
+                                <col style={{ width: '100px' }} />  {/* Início */}
+                                <col style={{ width: '100px' }} />  {/* Término */}
+                                <col style={{ width: '80px' }} />   {/* Ações */}
                             </colgroup>
                             <thead className="bg-green-50">
                                 <tr>
-                                    <th className="px-3 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider">ID</th>
-                                    <th className="px-3 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider">Cliente</th>
-                                    <th className="px-3 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider">Número</th>
-                                    <th className="px-3 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider">Data do Download</th>
-                                    <th className="px-3 py-3 text-right text-xs font-medium text-green-800 uppercase tracking-wider">Ações</th>
+                                    <th className="px-2 py-2 text-left text-xs font-medium text-green-800 uppercase">ID</th>
+                                    <th className="px-2 py-2 text-left text-xs font-medium text-green-800 uppercase">Cliente</th>
+                                    <th className="px-2 py-2 text-left text-xs font-medium text-green-800 uppercase">Número</th>
+                                    <th className="px-2 py-2 text-left text-xs font-medium text-green-800 uppercase">Início</th>
+                                    <th className="px-2 py-2 text-left text-xs font-medium text-green-800 uppercase">Fim</th>
+                                    <th className="px-2 py-2 text-center text-xs font-medium text-green-800 uppercase">Ação</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-green-200">
                                 {filteredChats.map((chat) => (
-                                    <tr key={chat.id} className="hover:bg-green-50 transition-colors">
-                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-green-900 truncate">{chat.id}</td>
-                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-green-900 truncate">
+                                    <tr key={chat.id} className="hover:bg-green-50 transition-colors text-sm">
+                                        <td className="px-2 py-2">{chat.id}</td>
+                                        <td className="px-2 py-2 truncate" title={chatDetails[chat.id]?.clientName || '-'}>
                                             {chatDetails[chat.id]?.clientName || '-'}
                                         </td>
-                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-green-900 truncate">
+                                        <td className="px-2 py-2 truncate" title={chatDetails[chat.id]?.clientId || '-'}>
                                             {chatDetails[chat.id]?.clientId || '-'}
                                         </td>
-                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-green-900 truncate">
-                                            {new Date(chat.downloadDate).toLocaleString('pt-BR')}
+                                        <td className="px-2 py-2">
+                                            {chatDetails[chat.id]?.beginTime ? 
+                                                new Date(chatDetails[chat.id].beginTime).toLocaleDateString('pt-BR', {
+                                                    day: '2-digit',
+                                                    month: '2-digit',
+                                                    year: '2-digit'
+                                                }) : '-'
+                                            }
                                         </td>
-                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-right">
+                                        <td className="px-2 py-2">
+                                            {chatDetails[chat.id]?.endTime ? 
+                                                new Date(chatDetails[chat.id].endTime).toLocaleDateString('pt-BR', {
+                                                    day: '2-digit',
+                                                    month: '2-digit',
+                                                    year: '2-digit'
+                                                }) : '-'
+                                            }
+                                        </td>
+                                        <td className="px-2 py-2 text-center">
                                             <button
                                                 onClick={() => handleViewConversation(chat.id)}
-                                                className="inline-flex items-center px-3 py-1.5 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+                                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-300 rounded hover:bg-green-100"
                                             >
-                                                Ver Conversa
+                                                Ver
                                             </button>
                                         </td>
                                     </tr>
