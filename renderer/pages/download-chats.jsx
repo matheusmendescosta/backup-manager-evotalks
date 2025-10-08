@@ -12,6 +12,7 @@ export default function DownloadedChats() {
     const [endDate, setEndDate] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
     const [itemsPerPage] = React.useState(10);
+    const [loadingDetails, setLoadingDetails] = React.useState({});
     const router = useRouter();
 
     React.useEffect(() => {
@@ -20,6 +21,7 @@ export default function DownloadedChats() {
 
     const loadChatDetails = async (chatId) => {
         try {
+            setLoadingDetails(prev => ({ ...prev, [chatId]: true }));
             const config = await window.ipc.invoke('read-config');
             if (!config?.instanceUrl || !config?.apiKey) return;
 
@@ -46,6 +48,8 @@ export default function DownloadedChats() {
             }));
         } catch (err) {
             console.error('Erro ao carregar detalhes do chat:', err);
+        } finally {
+            setLoadingDetails(prev => ({ ...prev, [chatId]: false }));
         }
     };
 
@@ -241,34 +245,58 @@ export default function DownloadedChats() {
                                 {paginatedChats.map((chat) => (
                                     <tr key={chat.id} className="hover:bg-green-50 transition-colors text-sm">
                                         <td className="px-2 py-2">{chat.id}</td>
-                                        <td className="px-2 py-2 truncate" title={chatDetails[chat.id]?.clientName || '-'}>
-                                            {chatDetails[chat.id]?.clientName || '-'}
+                                        <td className="px-2 py-2 truncate">
+                                            {loadingDetails[chat.id] ? (
+                                                <div className="flex items-center space-x-2">
+                                                    <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                                    <span className="text-green-600">Carregando...</span>
+                                                </div>
+                                            ) : (
+                                                <span title={chatDetails[chat.id]?.clientName || '-'}
+                                                >
+                                                    {chatDetails[chat.id]?.clientName || '-'}
+                                                </span>
+                                            )}
                                         </td>
-                                        <td className="px-2 py-2 truncate" title={chatDetails[chat.id]?.clientId || '-'}>
-                                            {chatDetails[chat.id]?.clientId || '-'}
+                                        <td className="px-2 py-2 truncate">
+                                            {loadingDetails[chat.id] ? (
+                                                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                            ) : (
+                                                <span title={chatDetails[chat.id]?.clientId || '-'}
+                                                >
+                                                    {chatDetails[chat.id]?.clientId || '-'}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-2 py-2">
-                                            {chatDetails[chat.id]?.beginTime ?
-                                                new Date(chatDetails[chat.id].beginTime).toLocaleDateString('pt-BR', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    year: '2-digit'
-                                                }) : '-'
-                                            }
+                                            {loadingDetails[chat.id] ? (
+                                                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                            ) : (
+                                                chatDetails[chat.id]?.beginTime ?
+                                                    new Date(chatDetails[chat.id].beginTime).toLocaleDateString('pt-BR', {
+                                                        day: '2-digit',
+                                                        month: '2-digit',
+                                                        year: '2-digit'
+                                                    }) : '-'
+                                            )}
                                         </td>
                                         <td className="px-2 py-2">
-                                            {chatDetails[chat.id]?.endTime ?
-                                                new Date(chatDetails[chat.id].endTime).toLocaleDateString('pt-BR', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    year: '2-digit'
-                                                }) : '-'
-                                            }
+                                            {loadingDetails[chat.id] ? (
+                                                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                            ) : (
+                                                chatDetails[chat.id]?.endTime ?
+                                                    new Date(chatDetails[chat.id].endTime).toLocaleDateString('pt-BR', {
+                                                        day: '2-digit',
+                                                        month: '2-digit',
+                                                        year: '2-digit'
+                                                    }) : '-'
+                                            )}
                                         </td>
                                         <td className="px-2 py-2 text-center">
                                             <button
                                                 onClick={() => handleViewConversation(chat.id)}
-                                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-300 rounded hover:bg-green-100"
+                                                disabled={loadingDetails[chat.id]}
+                                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-300 rounded hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 Ver
                                             </button>
