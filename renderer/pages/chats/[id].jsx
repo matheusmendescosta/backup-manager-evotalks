@@ -12,6 +12,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [files, setFiles] = useState([]);
 
+  // Modify the useEffect message parsing
   useEffect(() => {
     if (!id) return;
 
@@ -23,20 +24,21 @@ export default function ChatPage() {
         .split("\n")
         .filter(line => line.trim() !== "");
 
-      // pega as 2 primeiras linhas como cabeçalho
+      // Get header info (first 2 lines)
       const headerInfo = {
         meta: lines[0] || "",
         time: lines[1] || ""
       };
 
-      // o resto são mensagens
+      // Parse all remaining lines
       const parsedMessages = lines.slice(2).map(line => {
         const msgRegex = /^\[(.*?)\]\[LI\]\[(>|<)\]\[(.*?)\]\s-\s(.*)$/;
+        const systemRegex = /^\[(.*?)\]\[LI\]\[(.*?)\]$/;
         const fileRegex = /Envio do arquivo (.*)$/;
 
+        // Check if it's a regular message
         if (msgRegex.test(line)) {
           const [, datetime, direction, sender, text] = line.match(msgRegex);
-
           return {
             time: datetime,
             sender: direction === ">" ? "Cliente" : "Agente",
@@ -45,9 +47,28 @@ export default function ChatPage() {
             type: fileRegex.test(text) ? "file" : "text",
           };
         }
+        
+        // Check if it's a system message
+        if (systemRegex.test(line)) {
+          const [, datetime, text] = line.match(systemRegex);
+          return {
+            time: datetime,
+            sender: "Sistema",
+            from: "Sistema",
+            text,
+            type: "system"
+          };
+        }
 
-        return null; // ignora logs/automação
-      }).filter(Boolean);
+        // If it doesn't match any format, treat as system message
+        return {
+          time: "",
+          sender: "Sistema",
+          from: "Sistema",
+          text: line,
+          type: "system"
+        };
+      });
 
       setHeader(headerInfo);
       setMessages(parsedMessages);
@@ -75,13 +96,21 @@ export default function ChatPage() {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex ${msg.sender === "Agente" ? "justify-end" : "justify-start"}`}
+              className={`flex ${
+                msg.sender === "Sistema" 
+                  ? "justify-center" 
+                  : msg.sender === "Agente" 
+                    ? "justify-end" 
+                    : "justify-start"
+              }`}
             >
               <div
                 className={`max-w-[70%] rounded-2xl p-3 shadow ${
-                  msg.sender === "Agente"
-                    ? "bg-green-600 text-white rounded-br-none"
-                    : "bg-green-100 text-green-900 rounded-bl-none"
+                  msg.sender === "Sistema"
+                    ? "bg-gray-100 text-gray-700 text-xs italic"
+                    : msg.sender === "Agente"
+                      ? "bg-green-600 text-white rounded-br-none"
+                      : "bg-green-100 text-green-900 rounded-bl-none"
                 }`}
               >
                 {msg.type === "file" ? (
@@ -89,11 +118,13 @@ export default function ChatPage() {
                 ) : (
                   <p className="text-sm">{msg.text}</p>
                 )}
-                <span className={`text-xs block mt-1 ${
-                  msg.sender === "Agente" ? "text-green-100" : "text-green-700"
-                }`}>
-                  {msg.time} • {msg.from}
-                </span>
+                {msg.sender !== "Sistema" && (
+                  <span className={`text-xs block mt-1 ${
+                    msg.sender === "Agente" ? "text-green-100" : "text-green-700"
+                  }`}>
+                    {msg.time} • {msg.from}
+                  </span>
+                )}
               </div>
             </div>
           ))}
