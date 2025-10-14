@@ -342,8 +342,8 @@ export default function DownloadedChats() {
                                             key={i + 1}
                                             onClick={() => handlePageChange(i + 1)}
                                             className={`relative inline-flex items-center px-3 py-1 text-sm font-medium border-t border-b border-green-300 ${currentPage === i + 1
-                                                    ? 'bg-green-600 text-white border-green-600'
-                                                    : 'bg-white text-green-700 hover:bg-green-50'
+                                                ? 'bg-green-600 text-white border-green-600'
+                                                : 'bg-white text-green-700 hover:bg-green-50'
                                                 }`}
                                         >
                                             {i + 1}
@@ -357,8 +357,8 @@ export default function DownloadedChats() {
                                                 key={num}
                                                 onClick={() => handlePageChange(num)}
                                                 className={`relative inline-flex items-center px-3 py-1 text-sm font-medium border-t border-b border-green-300 ${currentPage === num
-                                                        ? 'bg-green-600 text-white border-green-600'
-                                                        : 'bg-white text-green-700 hover:bg-green-50'
+                                                    ? 'bg-green-600 text-white border-green-600'
+                                                    : 'bg-white text-green-700 hover:bg-green-50'
                                                     }`}
                                             >
                                                 {num}
@@ -372,8 +372,8 @@ export default function DownloadedChats() {
                                                 key={num}
                                                 onClick={() => handlePageChange(num)}
                                                 className={`relative inline-flex items-center px-3 py-1 text-sm font-medium border-t border-b border-green-300 ${currentPage === num
-                                                        ? 'bg-green-600 text-white border-green-600'
-                                                        : 'bg-white text-green-700 hover:bg-green-50'
+                                                    ? 'bg-green-600 text-white border-green-600'
+                                                    : 'bg-white text-green-700 hover:bg-green-50'
                                                     }`}
                                             >
                                                 {num}
@@ -396,6 +396,16 @@ export default function DownloadedChats() {
                     </div>
                 )}
             </main>
+            <footer className="w-full max-w-6xl mx-auto mt-4 text-center">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800">
+                        <svg className="inline-block w-4 h-4 mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Lembre-se: Os downloads automáticos só serão realizados se o computador estiver ligado no horário programado na tela de configurações.
+                    </p>
+                </div>
+            </footer>
         </div>
     );
 }
