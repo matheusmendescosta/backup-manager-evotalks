@@ -66,8 +66,8 @@ ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
     return { txtContent: '', files: [], jsonContent: null, chatMetadata: null };
   }
 
-  // procura o arquivo zip ou txt relacionado ao chat
-  const files = fs.readdirSync(baseFolder).filter(f => f.includes(`chat_${chatId}`));
+  // procura o arquivo zip ou json relacionado ao chat
+  const files = fs.readdirSync(baseFolder).filter(f => f.includes(`chat_${chatId}`) && (f.endsWith('.zip') || f.endsWith('.json')));
 
   let jsonContent = null;
   let txtContent = '';
@@ -77,7 +77,16 @@ ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
   for (const file of files) {
     const filePath = path.join(baseFolder, file);
 
-    if (file.endsWith('.zip')) {
+    if (file.endsWith('.json')) {
+      // Ler JSON diretamente
+      const jsonData = fs.readFileSync(filePath, 'utf-8');
+      jsonContent = JSON.parse(jsonData);
+
+      if (jsonContent.chat && jsonContent.chat.messages) {
+        txtContent = formatConversationsFromJson(jsonContent);
+        chatMetadata = jsonContent.chat;
+      }
+    } else if (file.endsWith('.zip')) {
       // extrair para uma pasta temporária dentro do downloadPath
       const extractPath = path.join(baseFolder, `chat_${chatId}_extracted`);
       if (!fs.existsSync(extractPath)) {
@@ -94,8 +103,7 @@ ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
           // Ler e parsear o arquivo JSON
           const jsonData = fs.readFileSync(efPath, 'utf-8');
           jsonContent = JSON.parse(jsonData);
-          
-          // Extrair as conversas do JSON
+
           if (jsonContent.chat && jsonContent.chat.messages) {
             txtContent = formatConversationsFromJson(jsonContent);
             chatMetadata = jsonContent.chat;
@@ -106,19 +114,6 @@ ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
           fileList.push({ name: ef, type: path.extname(ef), path: efPath });
         }
       }
-    } else if (file.endsWith('.json')) {
-      // Ler JSON diretamente se não estiver em ZIP
-      const jsonData = fs.readFileSync(filePath, 'utf-8');
-      jsonContent = JSON.parse(jsonData);
-      
-      if (jsonContent.chat && jsonContent.chat.messages) {
-        txtContent = formatConversationsFromJson(jsonContent);
-        chatMetadata = jsonContent.chat;
-      }
-    } else if (file.endsWith('.txt')) {
-      txtContent = fs.readFileSync(filePath, 'utf-8');
-    } else {
-      fileList.push({ name: file, type: path.extname(file), path: filePath });
     }
   }
 
@@ -142,12 +137,12 @@ function formatConversationsFromJson(jsonData) {
       const sender = msg.direction === 'in' ? 'Cliente' : 'Agente';
       const text = msg.text || '';
       const direction = msg.direction === 'in' ? '>' : '<';
-      
+
       // Se houver arquivo anexado
       if (msg.file && msg.file.fileName) {
         return `[${timestamp}][LI][${direction}][${sender}] - Envio do arquivo ${msg.file.fileName}`;
       }
-      
+
       return `[${timestamp}][LI][${direction}][${sender}] - ${text}`;
     }).join('\n');
   }
@@ -158,11 +153,11 @@ function formatConversationsFromJson(jsonData) {
       const sender = msg.sender || msg.from || 'Desconhecido';
       const text = msg.text || msg.content || '';
       const direction = msg.direction === 'in' || msg.sender === 'cliente' ? '>' : '<';
-      
+
       return `[${timestamp}][LI][${direction}][${sender}] - ${text}`;
     }).join('\n');
   }
-  
+
   // Se jsonData tem um array de conversations
   if (Array.isArray(jsonData.conversations)) {
     formatted = jsonData.conversations.map(conv => {
@@ -170,7 +165,7 @@ function formatConversationsFromJson(jsonData) {
       const sender = conv.sender || conv.from || 'Desconhecido';
       const text = conv.text || conv.message || '';
       const direction = conv.direction === 'in' ? '>' : '<';
-      
+
       return `[${timestamp}][LI][${direction}][${sender}] - ${text}`;
     }).join('\n');
   }
@@ -280,20 +275,49 @@ async function downloadBackups() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ apiKey: config.apiKey, id: chatId, zip: true, includeFiles: true }),
         }
-      )
-      console.log(`Baixando backup do chat ${backupRes}...`)
+      );
+      console.log(`Baixando ZIP para chat ${chatId}:`, backupRes.ok);
       if (!backupRes.ok) {
-        chatsleft.push(chatId)
-        continue
+        chatsleft.push(chatId);
+        continue;
       }
-      const buffer = Buffer.from(await backupRes.arrayBuffer())
+      const buffer = Buffer.from(await backupRes.arrayBuffer());
+      const zipPath = path.join(config.downloadPath, `chat_${chatId}.zip`);
+      fs.writeFileSync(zipPath, buffer);
+      console.log('ZIP salvo:', zipPath, 'Tamanho:', buffer.length);
 
-      // Salva o arquivo direto na pasta de download configurada
-      const filePath = path.join(config.downloadPath, `chat_${chatId}.zip`)
-      fs.writeFileSync(filePath, buffer)
+      // Extrai o ZIP para verificar se há arquivos além do JSON
+      const extractPath = path.join(config.downloadPath, `chat_${chatId}_extracted`);
+      if (!fs.existsSync(extractPath)) fs.mkdirSync(extractPath);
+      const zip = new AdmZip(zipPath);
+      zip.extractAllTo(extractPath, true);
+
+      const extractedFiles = fs.readdirSync(extractPath);
+      console.log('Arquivos extraídos:', extractedFiles);
+
+      const jsonFile = extractedFiles.find(f => f.endsWith('.json'));
+      const otherFiles = extractedFiles.filter(f => !f.endsWith('.json'));
+
+      if (jsonFile) {
+        const jsonData = fs.readFileSync(path.join(extractPath, jsonFile), 'utf-8');
+        const jsonPath = path.join(config.downloadPath, `chat_${chatId}.json`);
+        fs.writeFileSync(jsonPath, jsonData);
+        console.log('JSON salvo:', jsonPath);
+
+        if (otherFiles.length === 0) {
+          fs.unlinkSync(zipPath); // Remove o ZIP
+          console.log('ZIP removido:', zipPath);
+        }
+        fs.rmSync(extractPath, { recursive: true, force: true }); // Limpa pasta extraída
+        console.log('Pasta extraída removida:', extractPath);
+      } else {
+        console.log('Nenhum arquivo JSON encontrado no ZIP para chat', chatId);
+        // Se não encontrou JSON, mantém o ZIP e limpa pasta extraída
+        fs.rmSync(extractPath, { recursive: true, force: true });
+      }
     } catch (err) {
-      chatsleft.push(chatId)
-      console.log(`Erro ao baixar backup do chat ${chatId}:`, err)
+      chatsleft.push(chatId);
+      console.log(`Erro ao baixar backup do chat ${chatId}:`, err);
     }
   }
 }
@@ -337,23 +361,25 @@ ipcMain.handle('check-chat-downloaded', async (_event, { chatId }) => {
   return rootFiles.some(f => f.includes(`chat_${chatId}`));
 });
 
+// Ajuste get-downloaded-chats para listar .zip e .json
 ipcMain.handle('get-downloaded-chats', async () => {
   const config = getConfig();
   if (!config.downloadPath) return [];
 
   try {
     const files = fs.readdirSync(config.downloadPath)
-      .filter(f => f.includes('chat_') && f.endsWith('.zip'));
+      .filter(f => f.startsWith('chat_') && (f.endsWith('.zip') || f.endsWith('.json')));
 
     return files.map(file => {
-      const chatId = file.replace('chat_', '').replace('.zip', '');
+      const chatId = file.replace('chat_', '').replace('.zip', '').replace('.json', '');
       const filePath = path.join(config.downloadPath, file);
       const stats = fs.statSync(filePath);
 
       return {
         id: chatId,
         downloadDate: stats.mtime,
-        path: filePath
+        path: filePath,
+        type: file.endsWith('.zip') ? 'zip' : 'json'
       };
     }).sort((a, b) => b.downloadDate - a.downloadDate); // Most recent first
   } catch (err) {

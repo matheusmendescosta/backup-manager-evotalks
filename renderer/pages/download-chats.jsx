@@ -22,28 +22,16 @@ export default function DownloadedChats() {
     const loadChatDetails = async (chatId) => {
         try {
             setLoadingDetails(prev => ({ ...prev, [chatId]: true }));
-            const config = await window.ipc.invoke('read-config');
-            if (!config?.instanceUrl || !config?.apiKey) return;
-
-            const response = await fetch(`https://${config.instanceUrl}/int/getGlobalChatDetail`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    apiKey: config.apiKey,
-                    chatId: chatId
-                }),
-            });
-
-            if (!response.ok) return;
-            const data = await response.json();
-
+            // Agora consulta o JSON baixado localmente
+            const result = await window.ipc.invoke('get-chat-files', { chatId });
+            const chat = result.chatMetadata || result.jsonContent?.chat || {};
             setChatDetails(prev => ({
                 ...prev,
                 [chatId]: {
-                    clientName: data.clientName || 'N/A',
-                    clientId: data.clientId || 'N/A',
-                    beginTime: data.beginTime || 'N/A',
-                    endTime: data.endTime || 'N/A',
+                    clientName: chat.clientName || 'N/A',
+                    clientId: chat.clientId || 'N/A',
+                    beginTime: chat.beginTime || 'N/A',
+                    endTime: chat.endTime || 'N/A',
                 }
             }));
         } catch (err) {
@@ -58,10 +46,10 @@ export default function DownloadedChats() {
             const downloadedChats = await window.ipc.invoke('get-downloaded-chats');
             setChats(downloadedChats);
 
-            // Load details for each chat
-            downloadedChats.forEach(chat => {
-                loadChatDetails(chat.id);
-            });
+            // Carrega detalhes de cada chat do JSON local
+            for (const chat of downloadedChats) {
+                await loadChatDetails(chat.id);
+            }
         } catch (err) {
             setError('Erro ao carregar chats baixados');
         } finally {
@@ -405,6 +393,7 @@ export default function DownloadedChats() {
                         Lembre-se: Os downloads automáticos só serão realizados se o computador estiver ligado no horário programado na tela de configurações.
                     </p>
                 </div>
+                <p className='pt-2 text-sm text-green-600'>Versão do sistema: 1.0.6</p>
             </footer>
         </div>
     );
