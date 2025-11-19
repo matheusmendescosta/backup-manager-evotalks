@@ -58,14 +58,21 @@ ipcMain.handle('save-file', async (_event, { chatId, buffer }) => {
 })
 
 ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
+  // Get the download path from config
   const config = getConfig();
-  const baseFolder = config.downloadPath; // agora busca direto na raiz
+  const baseFolder = config.downloadPath || app.getPath('downloads');
+
+  if (!fs.existsSync(baseFolder)) {
+    return { txtContent: '', files: [], jsonContent: null, chatMetadata: null };
+  }
 
   // procura o arquivo zip ou txt relacionado ao chat
   const files = fs.readdirSync(baseFolder).filter(f => f.includes(`chat_${chatId}`));
 
+  let jsonContent = null;
   let txtContent = '';
   let fileList = [];
+  let chatMetadata = null;
 
   for (const file of files) {
     const filePath = path.join(baseFolder, file);
@@ -83,11 +90,30 @@ ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
       const extractedFiles = fs.readdirSync(extractPath);
       for (const ef of extractedFiles) {
         const efPath = path.join(extractPath, ef);
-        if (ef.endsWith('.txt')) {
+        if (ef.endsWith('.json')) {
+          // Ler e parsear o arquivo JSON
+          const jsonData = fs.readFileSync(efPath, 'utf-8');
+          jsonContent = JSON.parse(jsonData);
+          
+          // Extrair as conversas do JSON
+          if (jsonContent.chat && jsonContent.chat.messages) {
+            txtContent = formatConversationsFromJson(jsonContent);
+            chatMetadata = jsonContent.chat;
+          }
+        } else if (ef.endsWith('.txt')) {
           txtContent = fs.readFileSync(efPath, 'utf-8');
         } else {
           fileList.push({ name: ef, type: path.extname(ef), path: efPath });
         }
+      }
+    } else if (file.endsWith('.json')) {
+      // Ler JSON diretamente se não estiver em ZIP
+      const jsonData = fs.readFileSync(filePath, 'utf-8');
+      jsonContent = JSON.parse(jsonData);
+      
+      if (jsonContent.chat && jsonContent.chat.messages) {
+        txtContent = formatConversationsFromJson(jsonContent);
+        chatMetadata = jsonContent.chat;
       }
     } else if (file.endsWith('.txt')) {
       txtContent = fs.readFileSync(filePath, 'utf-8');
@@ -96,18 +122,61 @@ ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
     }
   }
 
-  return { txtContent, files: fileList };
+  return { txtContent, files: fileList, jsonContent, chatMetadata };
 });
 
-ipcMain.handle("open-file", async (_event, filePath) => {
-  try {
-    await shell.openPath(filePath);
-    return true;
-  } catch (err) {
-    console.error("Erro ao abrir arquivo:", err);
-    return false;
+// Função auxiliar para formatar conversas do JSON
+function formatConversationsFromJson(jsonData) {
+  let formatted = '';
+
+  // Se jsonData tem a estrutura do novo formato com chat.messages
+  if (jsonData.chat && Array.isArray(jsonData.chat.messages)) {
+    // Adicionar informações do chat no início
+    const chatInfo = jsonData.chat;
+    formatted += `[${chatInfo.metadata?.exportedAt || new Date().toISOString()}][LI][Cliente: ${chatInfo.clientName || 'Desconhecido'} | Número: ${chatInfo.clientNumber || 'N/A'}]\n`;
+    formatted += `[${chatInfo.beginTime || ''}][LI][Chat iniciado em ${new Date(chatInfo.beginTime).toLocaleDateString('pt-BR')}]\n\n`;
+
+    // Processar as mensagens
+    formatted += jsonData.chat.messages.map(msg => {
+      const timestamp = msg.timestamp || new Date().toISOString();
+      const sender = msg.direction === 'in' ? 'Cliente' : 'Agente';
+      const text = msg.text || '';
+      const direction = msg.direction === 'in' ? '>' : '<';
+      
+      // Se houver arquivo anexado
+      if (msg.file && msg.file.fileName) {
+        return `[${timestamp}][LI][${direction}][${sender}] - Envio do arquivo ${msg.file.fileName}`;
+      }
+      
+      return `[${timestamp}][LI][${direction}][${sender}] - ${text}`;
+    }).join('\n');
   }
-});
+  // Manter suporte para formato antigo com messages array direto
+  else if (Array.isArray(jsonData.messages)) {
+    formatted = jsonData.messages.map(msg => {
+      const timestamp = msg.timestamp || msg.time || new Date().toISOString();
+      const sender = msg.sender || msg.from || 'Desconhecido';
+      const text = msg.text || msg.content || '';
+      const direction = msg.direction === 'in' || msg.sender === 'cliente' ? '>' : '<';
+      
+      return `[${timestamp}][LI][${direction}][${sender}] - ${text}`;
+    }).join('\n');
+  }
+  
+  // Se jsonData tem um array de conversations
+  if (Array.isArray(jsonData.conversations)) {
+    formatted = jsonData.conversations.map(conv => {
+      const timestamp = conv.timestamp || new Date().toISOString();
+      const sender = conv.sender || conv.from || 'Desconhecido';
+      const text = conv.text || conv.message || '';
+      const direction = conv.direction === 'in' ? '>' : '<';
+      
+      return `[${timestamp}][LI][${direction}][${sender}] - ${text}`;
+    }).join('\n');
+  }
+
+  return formatted;
+}
 
 // Apenas agendamentos semanais
 let scheduledWeeklyJobs = {}
@@ -162,7 +231,7 @@ async function checkAndHandleCleaning() {
           const buffer = Buffer.from(await backupRes.arrayBuffer());
           const filePath = path.join(config.downloadPath, `chat_${chatId}.zip`);
           fs.writeFileSync(filePath, buffer);
-          
+
           console.log(`Backup de limpeza do chat ${chatId} concluído`);
         } catch (err) {
           console.error(`Erro no backup de limpeza do chat ${chatId}:`, err);
@@ -199,19 +268,20 @@ async function downloadBackups() {
   if (!idsRes.ok) return
   const idsObj = await idsRes.json()
   const chatIds = idsObj || []
-  
+
   // 2. Baixar cada backup
   const chatsleft = []
   for (const chatId of chatIds) {
     try {
       const backupRes = await fetch(
-        `https://${config.instanceUrl}/int/backupChat`,
+        `https://${config.instanceUrl}/int/backupChatAsJson`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ apiKey: config.apiKey, id: chatId }),
+          body: JSON.stringify({ apiKey: config.apiKey, id: chatId, zip: true, includeFiles: true }),
         }
       )
+      console.log(`Baixando backup do chat ${backupRes}...`)
       if (!backupRes.ok) {
         chatsleft.push(chatId)
         continue
@@ -274,12 +344,12 @@ ipcMain.handle('get-downloaded-chats', async () => {
   try {
     const files = fs.readdirSync(config.downloadPath)
       .filter(f => f.includes('chat_') && f.endsWith('.zip'));
-    
+
     return files.map(file => {
       const chatId = file.replace('chat_', '').replace('.zip', '');
       const filePath = path.join(config.downloadPath, file);
       const stats = fs.statSync(filePath);
-      
+
       return {
         id: chatId,
         downloadDate: stats.mtime,
@@ -315,7 +385,17 @@ ipcMain.handle('get-cleaning-info', async () => {
   }
 });
 
-;(async () => {
+ipcMain.handle('open-file', async (_event, filePath) => {
+  try {
+    await shell.openPath(filePath);
+    return true;
+  } catch (err) {
+    console.error('Erro ao abrir arquivo:', err);
+    return false;
+  }
+});
+
+; (async () => {
   await app.whenReady();
 
   app.setLoginItemSettings({
