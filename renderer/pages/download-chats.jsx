@@ -29,7 +29,7 @@ export default function DownloadedChats() {
                 ...prev,
                 [chatId]: {
                     clientName: chat.clientName || 'N/A',
-                    clientId: chat.clientId || 'N/A',
+                    clientId: chat.clientNumber || 'N/A',
                     beginTime: chat.beginTime || 'N/A',
                     endTime: chat.endTime || 'N/A',
                 }
