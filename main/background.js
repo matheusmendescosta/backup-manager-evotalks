@@ -421,6 +421,42 @@ ipcMain.handle('open-file', async (_event, filePath) => {
   }
 });
 
+ipcMain.handle('get-last-backup-date', async () => {
+  const config = getConfig();
+  if (!config.downloadPath) return null;
+
+  try {
+    const files = fs.readdirSync(config.downloadPath)
+      .filter(f => f.startsWith('chat_') && (f.endsWith('.zip') || f.endsWith('.json')));
+
+    if (files.length === 0) return null;
+
+    // Pega o arquivo mais recente
+    let latestFile = null;
+    let latestTime = 0;
+
+    for (const file of files) {
+      const filePath = path.join(config.downloadPath, file);
+      const stats = fs.statSync(filePath);
+      if (stats.mtime.getTime() > latestTime) {
+        latestTime = stats.mtime.getTime();
+        latestFile = file;
+      }
+    }
+
+    if (latestFile) {
+      const filePath = path.join(config.downloadPath, latestFile);
+      const stats = fs.statSync(filePath);
+      return stats.mtime.toISOString();
+    }
+
+    return null;
+  } catch (err) {
+    console.error('Erro ao obter data do último backup:', err);
+    return null;
+  }
+});
+
 ; (async () => {
   await app.whenReady();
 
