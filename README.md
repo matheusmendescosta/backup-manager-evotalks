@@ -24,6 +24,8 @@ O **Evotalks Backup Manager** é uma aplicação desktop desenvolvida com tecnol
 - **Electron Serve** (v1.3.0) - Servidor HTTP para Electron
 - **Node Schedule** (v2.1.1) - Agendador de tarefas
 - **ADM-ZIP** (v0.5.16) - Manipulação de arquivos ZIP
+- **Node Fetch** (v3.3.2) - API Fetch para Node.js (requisições HTTP)
+- **Tailwind Merge** (v3.4.0) - Utilitário para mesclar classes Tailwind CSS
 
 ### Ferramentas de Desenvolvimento
 - **ESLint** (v9.39.1) - Linter para JavaScript
@@ -88,14 +90,11 @@ Isso irá:
 
 ## 📦 Scripts Disponíveis
 
-```json
-{
-  "dev": "nextron",                    // Rodar em desenvolvimento
-  "build": "nextron build",            // Compilar para produção
-  "postinstall": "electron-builder install-app-deps",  // Instalar dependências do Electron Builder
-  "lint": "eslint . --fix",            // Executar ESLint e corrigir automaticamente
-  "lint:check": "eslint ."             // Apenas verificar erros do ESLint
-}
+```bash
+npm run dev              # Rodar em desenvolvimento
+npm run build            # Compilar para produção
+npm run lint             # Executar ESLint e corrigir automaticamente
+npm run lint:check       # Apenas verificar erros do ESLint
 ```
 
 ### Exemplos de Uso
@@ -243,6 +242,7 @@ Para reportar bugs ou sugerir melhorias, abra uma issue no repositório.
 - ✨ Refatoração de componentes
 - ✨ Implementação de hooks customizados
 - ✨ Melhorias na paginação e filtros
+- ✨ Adicionado suporte a requisições HTTP com Node Fetch
 - 🐛 Correções de bugs menores
 - 📝 Documentação melhorada
 

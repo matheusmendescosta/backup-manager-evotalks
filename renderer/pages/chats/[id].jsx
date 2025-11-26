@@ -1,6 +1,8 @@
 'use client';
 // eslint-disable-next-line no-unused-vars
 import { FileArchive, Image, FileText, File, ExternalLink } from 'lucide-react';
+// eslint-disable-next-line
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { twMerge } from 'tailwind-merge';

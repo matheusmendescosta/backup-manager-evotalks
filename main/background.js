@@ -21,7 +21,7 @@ const configPath = path.join(app.getPath('userData'), 'config.json');
 let mainWindow = null;
 let tray = null;
 let isQuiting = false;
-let lastCleaningCheck = null; // Add this near the top with other state variables
+let lastCleaningCheck = null;
 
 ipcMain.handle('save-config', async (_event, data) => {
   fs.writeFileSync(configPath, JSON.stringify(data, null, 2));
@@ -46,6 +46,7 @@ ipcMain.handle('choose-folder', async () => {
 
 ipcMain.handle('save-file', async (_event, { chatId, buffer }) => {
   // Lê o caminho salvo no config
+  // eslint-disable-next-line
   const configPath = path.join(app.getPath('userData'), 'config.json');
   let downloadPath = app.getPath('downloads');
   if (fs.existsSync(configPath)) {
@@ -128,6 +129,7 @@ function formatConversationsFromJson(jsonData) {
   if (jsonData.chat && Array.isArray(jsonData.chat.messages)) {
     // Adicionar informações do chat no início
     const chatInfo = jsonData.chat;
+    // eslint-disable-next-line
     formatted += `[${chatInfo.metadata?.exportedAt || new Date().toISOString()}][LI][Cliente: ${chatInfo.clientName || 'Desconhecido'} | Número: ${chatInfo.clientNumber || 'N/A'}]\n`;
     formatted += `[${chatInfo.beginTime || ''}][LI][Chat iniciado em ${new Date(chatInfo.beginTime).toLocaleDateString('pt-BR')}]\n\n`;
 
@@ -145,9 +147,8 @@ function formatConversationsFromJson(jsonData) {
 
       return `[${timestamp}][LI][${direction}][${sender}] - ${text}`;
     }).join('\n');
-  }
-  // Manter suporte para formato antigo com messages array direto
-  else if (Array.isArray(jsonData.messages)) {
+  } else if (Array.isArray(jsonData.messages)) {
+    // Manter suporte para formato antigo com messages array direto
     formatted = jsonData.messages.map(msg => {
       const timestamp = msg.timestamp || msg.time || new Date().toISOString();
       const sender = msg.sender || msg.from || 'Desconhecido';
@@ -177,6 +178,7 @@ function formatConversationsFromJson(jsonData) {
 let scheduledWeeklyJobs = {};
 
 function getConfig() {
+  // eslint-disable-next-line
   const configPath = path.join(app.getPath('userData'), 'config.json');
   if (fs.existsSync(configPath)) {
     return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -207,7 +209,6 @@ async function checkAndHandleCleaning() {
     const cleaningInfo = await cleaningRes.json();
 
     if (cleaningInfo.scheduled) {
-      console.log('Iniciando backup de limpeza:', cleaningInfo);
       const { firstId, lastId } = cleaningInfo;
 
       // Download all chats in range
@@ -227,7 +228,6 @@ async function checkAndHandleCleaning() {
           const filePath = path.join(config.downloadPath, `chat_${chatId}.zip`);
           fs.writeFileSync(filePath, buffer);
 
-          console.log(`Backup de limpeza do chat ${chatId} concluído`);
         } catch (err) {
           console.error(`Erro no backup de limpeza do chat ${chatId}:`, err);
         }
@@ -235,7 +235,6 @@ async function checkAndHandleCleaning() {
 
       // Mark as checked for today
       lastCleaningCheck = today;
-      console.log('Backup de limpeza concluído');
     }
   } catch (err) {
     console.error('Erro ao verificar limpeza:', err);
@@ -276,7 +275,7 @@ async function downloadBackups() {
           body: JSON.stringify({ apiKey: config.apiKey, id: chatId, zip: true, includeFiles: true }),
         }
       );
-      console.log(`Baixando ZIP para chat ${chatId}:`, backupRes.ok);
+
       if (!backupRes.ok) {
         chatsleft.push(chatId);
         continue;
@@ -284,7 +283,7 @@ async function downloadBackups() {
       const buffer = Buffer.from(await backupRes.arrayBuffer());
       const zipPath = path.join(config.downloadPath, `chat_${chatId}.zip`);
       fs.writeFileSync(zipPath, buffer);
-      console.log('ZIP salvo:', zipPath, 'Tamanho:', buffer.length);
+
 
       // Extrai o ZIP para verificar se há arquivos além do JSON
       const extractPath = path.join(config.downloadPath, `chat_${chatId}_extracted`);
@@ -293,7 +292,6 @@ async function downloadBackups() {
       zip.extractAllTo(extractPath, true);
 
       const extractedFiles = fs.readdirSync(extractPath);
-      console.log('Arquivos extraídos:', extractedFiles);
 
       const jsonFile = extractedFiles.find(f => f.endsWith('.json'));
       const otherFiles = extractedFiles.filter(f => !f.endsWith('.json'));
@@ -302,22 +300,20 @@ async function downloadBackups() {
         const jsonData = fs.readFileSync(path.join(extractPath, jsonFile), 'utf-8');
         const jsonPath = path.join(config.downloadPath, `chat_${chatId}.json`);
         fs.writeFileSync(jsonPath, jsonData);
-        console.log('JSON salvo:', jsonPath);
 
         if (otherFiles.length === 0) {
-          fs.unlinkSync(zipPath); // Remove o ZIP
-          console.log('ZIP removido:', zipPath);
+          fs.unlinkSync(zipPath);
         }
-        fs.rmSync(extractPath, { recursive: true, force: true }); // Limpa pasta extraída
-        console.log('Pasta extraída removida:', extractPath);
+        fs.rmSync(extractPath, { recursive: true, force: true });
+
       } else {
-        console.log('Nenhum arquivo JSON encontrado no ZIP para chat', chatId);
         // Se não encontrou JSON, mantém o ZIP e limpa pasta extraída
         fs.rmSync(extractPath, { recursive: true, force: true });
       }
+      // eslint-disable-next-line
     } catch (err) {
       chatsleft.push(chatId);
-      console.log(`Erro ao baixar backup do chat ${chatId}:`, err);
+
     }
   }
 }
@@ -381,7 +377,7 @@ ipcMain.handle('get-downloaded-chats', async () => {
         path: filePath,
         type: file.endsWith('.zip') ? 'zip' : 'json',
       };
-    }).sort((a, b) => b.downloadDate - a.downloadDate); // Most recent first
+    }).sort((a, b) => b.downloadDate - a.downloadDate);
   } catch (err) {
     console.error('Erro ao listar chats baixados:', err);
     return [];
@@ -470,6 +466,7 @@ ipcMain.handle('get-last-backup-date', async () => {
     height: 600,
     show: false, // Start hidden
     webPreferences: {
+      // eslint-disable-next-line
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
@@ -498,6 +495,7 @@ ipcMain.handle('get-last-backup-date', async () => {
   // Improved icon paths for production
   const iconPath = isProd
     ? path.join(process.resourcesPath, 'resources', 'icon.ico')
+    // eslint-disable-next-line
     : path.join(__dirname, '..', 'resources', 'icon.ico');
 
   try {

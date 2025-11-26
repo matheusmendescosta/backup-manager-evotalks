@@ -87,7 +87,7 @@ export default defineConfig([
       'yoda': 'error',
       'max-len': ['warn', { code: 140 }],
       'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'warn',
+      'react/prop-types': 'off',
       'react/display-name': 'warn',
       'react/no-unescaped-entities': 'warn',
       'react/no-children-prop': 'warn',

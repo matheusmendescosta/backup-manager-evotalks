@@ -183,7 +183,7 @@ export default function Dashboard() {
             ligado no horário programado na tela de configurações.
           </p>
         </div>
-        <p className='pt-2 text-sm text-green-600'>Versão do sistema: 1.0.6</p>
+        <p className='pt-2 text-sm text-green-600'>Versão do sistema: 1.0.7</p>
       </footer>
     </div>
   );
