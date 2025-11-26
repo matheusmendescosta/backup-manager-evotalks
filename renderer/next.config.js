@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 
-export default {
+// eslint-disable-next-line
+module.exports = {
   output: 'export',
   distDir: process.env.NODE_ENV === 'production' ? '../app' : '.next',
   trailingSlash: true,
