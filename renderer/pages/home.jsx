@@ -20,7 +20,7 @@ export default function HomePage() {
         setApiKey(config.apiKey || '');
         setSaved(true);
         // Redireciona automaticamente se já estiver configurado
-        router.replace('/download-chats');
+        router.replace('/Dashboard');
       }
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -37,7 +37,7 @@ export default function HomePage() {
     try {
       await window.ipc.invoke('save-config', { instanceUrl, apiKey });
       setSaved(true);
-      router.replace('/download-chats');
+      router.replace('/Dashboard');
     } catch (err) {
       setError('Erro ao salvar configurações.');
     }

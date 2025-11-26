@@ -16,13 +16,10 @@ export default function Settings() {
   const [apiKey, setApiKey] = React.useState('');
   const [downloadPath, setDownloadPath] = React.useState('');
   const [autoBackup, setAutoBackup] = React.useState(false);
-  // Add new states for email and phone
   const [email, setEmail] = React.useState('');
   const [phone, setPhone] = React.useState('');
-  // Add new state for cleaning info
   const [cleaningInfo, setCleaningInfo] = React.useState(null);
 
-  // Novo estado para dias da semana e horários
   const [weekSchedule, setWeekSchedule] = React.useState({
     '0': { enabled: false, time: '00:00' },
     '1': { enabled: false, time: '00:00' },
@@ -269,7 +266,7 @@ export default function Settings() {
         )}
         <div className="mt-6 text-center">
           <span className="text-green-700">Voltar </span>
-          <Link href="/download-chats" className="text-green-600 underline hover:text-green-800 ml-1">
+          <Link href="/Dashboard" className="text-green-600 underline hover:text-green-800 ml-1">
             Ir para Chat
           </Link>
         </div>
