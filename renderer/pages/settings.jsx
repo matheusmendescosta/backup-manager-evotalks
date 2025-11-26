@@ -1,5 +1,7 @@
+// eslint-disable-next-line no-unused-vars
 import Link from 'next/link';
 import React from 'react';
+import { twMerge } from 'tailwind-merge';
 
 const weekDays = [
   { value: '1', label: 'Segunda-feira' },
@@ -125,7 +127,8 @@ export default function Settings() {
                   type="text"
                   value={instanceUrl}
                   onChange={e => setInstanceUrl(e.target.value)}
-                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  className={twMerge('mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none',
+                    'focus:ring-2 focus:ring-green-400 transition')}
                   placeholder="sua-instancia.com"
                 />
               </label>
@@ -137,7 +140,8 @@ export default function Settings() {
                   type="password"
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
-                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  className={twMerge('mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none',
+                    'focus:ring-2 focus:ring-green-400 transition')}
                   placeholder="Chave da API"
                 />
               </label>
@@ -149,7 +153,8 @@ export default function Settings() {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  className={twMerge('mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none',
+                    'focus:ring-2 focus:ring-green-400 transition')}
                   placeholder="seu@email.com"
                 />
               </label>
@@ -161,7 +166,8 @@ export default function Settings() {
                   type="tel"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
-                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  className={twMerge('mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none',
+                    'focus:ring-2 focus:ring-green-400 transition')}
                   placeholder="(00) 00000-0000"
                 />
               </label>
@@ -219,7 +225,8 @@ export default function Settings() {
                           onChange={e =>
                             handleWeekDayChange(day.value, 'time', e.target.value)
                           }
-                          className="px-2 py-1 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                          className={twMerge('px-2 py-1 border border-green-300 rounded focus:outline-none',
+                            'focus:ring-2 focus:ring-green-400 transition')}
                           disabled={!weekSchedule[day.value].enabled}
                         />
                       </td>
@@ -251,7 +258,10 @@ export default function Settings() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  d={
+                    'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77'
+                    + '1.333.192 3 1.732 3z'
+                  }
                 />
               </svg>
               <div>

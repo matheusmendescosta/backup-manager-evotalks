@@ -1,8 +1,9 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
-import Link from "next/link";
-import { FileText, Image, FileArchive, File, ExternalLink } from "lucide-react";
+'use client';
+// eslint-disable-next-line no-unused-vars
+import { FileArchive, Image, FileText, File, ExternalLink } from 'lucide-react';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import { twMerge } from 'tailwind-merge';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -24,14 +25,14 @@ export default function ChatPage() {
       // Extrai metadados do chat
       const chatMetadata = parsed.chatMetadata || parsed.jsonContent?.chat || {};
       setHeader({
-        clientName: chatMetadata.clientName || "",
-        clientNumber: chatMetadata.clientNumber || "",
-        clientId: chatMetadata.clientId || "",
-        beginTime: chatMetadata.beginTime || "",
-        endTime: chatMetadata.endTime || "",
-        status: chatMetadata.status || "",
-        meta: chatMetadata.id || "",
-        queueType: chatMetadata.queueType || ""
+        clientName: chatMetadata.clientName || '',
+        clientNumber: chatMetadata.clientNumber || '',
+        clientId: chatMetadata.clientId || '',
+        beginTime: chatMetadata.beginTime || '',
+        endTime: chatMetadata.endTime || '',
+        status: chatMetadata.status || '',
+        meta: chatMetadata.id || '',
+        queueType: chatMetadata.queueType || '',
       });
 
       // Extrai mensagens do JSON
@@ -44,7 +45,7 @@ export default function ChatPage() {
 
       const parsedMessages = messagesArray.map(msg => ({
         id: msg.id,
-        direction: msg.direction, // "in", "out", "system"
+        direction: msg.direction,
         text: msg.text,
         time: msg.timestamp,
         file: msg.file,
@@ -71,7 +72,13 @@ export default function ChatPage() {
           <div className="flex items-center justify-between mb-2">
             <div>
               <div className="mb-3">
-                <h1 className="text-2xl font-bold text-green-800 bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+                <h1
+                  className={twMerge(
+                    'text-2xl font-bold text-green-800',
+                    'bg-gradient-to-r from-green-600 to-green-800',
+                    'bg-clip-text text-transparent'
+                  )}
+                >
                   Chat #{header.meta}
                 </h1>
                 {header.queueType && (
@@ -103,7 +110,7 @@ export default function ChatPage() {
               Voltar
             </Link>
           </div>
-          
+
           <div className="border-t border-green-200 pt-2 mt-2 text-xs text-green-700 grid grid-cols-2 gap-2">
             {header.beginTime && (
               <p>
@@ -118,7 +125,7 @@ export default function ChatPage() {
           </div>
         </div>
       )}
-      
+
       <div className="flex flex-1 gap-4 overflow-hidden">
         <div className="flex-1 bg-white rounded-lg p-3 overflow-y-auto flex flex-col space-y-2 border border-green-200">
           {messages.length === 0 ? (
@@ -129,21 +136,19 @@ export default function ChatPage() {
             messages.map((msg, i) => (
               <div
                 key={msg.id || i}
-                className={`flex ${
-                  msg.direction === "system"
-                    ? "justify-center"
-                    : msg.direction === "in"
-                      ? "justify-start"
-                      : "justify-end"
+                className={`flex ${msg.direction === 'system'
+                  ? 'justify-center'
+                  : msg.direction === 'in'
+                    ? 'justify-start'
+                    : 'justify-end'
                 }`}
               >
                 <div
-                  className={`max-w-[70%] rounded-2xl p-3 shadow ${
-                    msg.direction === "system"
-                      ? "bg-gray-100 text-gray-700 text-xs italic"
-                      : msg.direction === "in"
-                        ? "bg-green-100 text-green-900 rounded-bl-none"
-                        : "bg-green-600 text-white rounded-br-none"
+                  className={`max-w-[70%] rounded-2xl p-3 shadow ${msg.direction === 'system'
+                    ? 'bg-gray-100 text-gray-700 text-xs italic'
+                    : msg.direction === 'in'
+                      ? 'bg-green-100 text-green-900 rounded-bl-none'
+                      : 'bg-green-600 text-white rounded-br-none'
                   }`}
                 >
                   {msg.file && msg.file.fileName ? (
@@ -151,9 +156,8 @@ export default function ChatPage() {
                   ) : (
                     <p className="text-sm">{msg.text}</p>
                   )}
-                  {msg.time && msg.direction !== "system" && (
-                    <span className={`text-xs block mt-1 ${
-                      msg.direction === "in" ? "text-green-700" : "text-green-100"
+                  {msg.time && msg.direction !== 'system' && (
+                    <span className={`text-xs block mt-1 ${msg.direction === 'in' ? 'text-green-700' : 'text-green-100'
                     }`}>
                       {new Date(msg.time).toLocaleString('pt-BR')}
                     </span>
@@ -163,7 +167,7 @@ export default function ChatPage() {
             ))
           )}
         </div>
-        
+
         {files.length > 0 && (
           <div className="w-1/3 flex flex-col bg-white shadow rounded-lg border border-green-200">
             <div className="p-4 border-b border-green-200 bg-green-50">
@@ -171,19 +175,19 @@ export default function ChatPage() {
             </div>
             <ul className="flex-1 overflow-y-auto divide-y divide-green-100">
               {files.map((f, i) => {
-                const ext = f.name.split(".").pop()?.toLowerCase();
+                const ext = f.name.split('.').pop()?.toLowerCase();
 
                 const getIcon = () => {
-                  if (["png", "jpg", "jpeg"].includes(ext || "")) return <Image className="w-5 h-5 text-green-600" />;
-                  if (["zip", "rar"].includes(ext || "")) return <FileArchive className="w-5 h-5 text-green-600" />;
-                  if (ext === "txt") return <FileText className="w-5 h-5 text-green-600" />;
+                  if (['png', 'jpg', 'jpeg'].includes(ext || '')) return <Image className="w-5 h-5 text-green-600" />;
+                  if (['zip', 'rar'].includes(ext || '')) return <FileArchive className="w-5 h-5 text-green-600" />;
+                  if (ext === 'txt') return <FileText className="w-5 h-5 text-green-600" />;
                   return <File className="w-5 h-5 text-green-600" />;
                 };
 
                 return (
                   <li
                     key={i}
-                    onClick={() => window.ipc.invoke("open-file", f.path)}
+                    onClick={() => window.ipc.invoke('open-file', f.path)}
                     className="flex items-center gap-3 p-3 hover:bg-green-50 cursor-pointer transition"
                   >
                     {getIcon()}

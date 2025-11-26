@@ -1,7 +1,10 @@
-import React from 'react'
-import Head from 'next/head'
-import { useRouter } from 'next/router'
-import Image from 'next/image'
+import React from 'react';
+// eslint-disable-next-line no-unused-vars
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+// eslint-disable-next-line no-unused-vars
+import Image from 'next/image';
+import { twMerge } from 'tailwind-merge';
 
 export default function HomePage() {
   const [instanceUrl, setInstanceUrl] = React.useState('');
@@ -38,6 +41,7 @@ export default function HomePage() {
       await window.ipc.invoke('save-config', { instanceUrl, apiKey });
       setSaved(true);
       router.replace('/Dashboard');
+      // eslint-disable-next-line no-unused-vars
     } catch (err) {
       setError('Erro ao salvar configurações.');
     }
@@ -71,7 +75,8 @@ export default function HomePage() {
                   type="text"
                   value={instanceUrl}
                   onChange={e => setInstanceUrl(e.target.value)}
-                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  className={twMerge('mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2',
+                    'focus:ring-green-400 transition')}
                   placeholder="sua-instância.evotalks.com.br"
                   autoFocus
                 />
@@ -84,7 +89,8 @@ export default function HomePage() {
                   type="password"
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
-                  className="mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  className={twMerge('mt-2 w-full px-3 py-2 border border-green-300 rounded focus:outline-none',
+                    'focus:ring-2 focus:ring-green-400 transition')}
                   placeholder="Chave da API"
                 />
               </label>
@@ -102,5 +108,5 @@ export default function HomePage() {
         </div>
       </div>
     </React.Fragment>
-  )
+  );
 }

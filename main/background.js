@@ -1,21 +1,21 @@
-import path from 'path'
-import { app, ipcMain, dialog, Tray, Menu, shell } from 'electron'
-import fs from 'fs'
-import serve from 'electron-serve'
-import { createWindow } from './helpers'
-import fetch from 'node-fetch'
-import schedule from 'node-schedule'
-import AdmZip from 'adm-zip'
+import path from 'path';
+import { app, ipcMain, dialog, Tray, Menu, shell } from 'electron';
+import fs from 'fs';
+import serve from 'electron-serve';
+import { createWindow } from './helpers';
+import fetch from 'node-fetch';
+import schedule from 'node-schedule';
+import AdmZip from 'adm-zip';
 
-const isProd = process.env.NODE_ENV === 'production'
+const isProd = process.env.NODE_ENV === 'production';
 
 if (isProd) {
-  serve({ directory: 'app' })
+  serve({ directory: 'app' });
 } else {
-  app.setPath('userData', `${app.getPath('userData')} (development)`)
+  app.setPath('userData', `${app.getPath('userData')} (development)`);
 }
 
-const configPath = path.join(app.getPath('userData'), 'config.json')
+const configPath = path.join(app.getPath('userData'), 'config.json');
 
 // Move these to top level for better management
 let mainWindow = null;
@@ -24,38 +24,38 @@ let isQuiting = false;
 let lastCleaningCheck = null; // Add this near the top with other state variables
 
 ipcMain.handle('save-config', async (_event, data) => {
-  fs.writeFileSync(configPath, JSON.stringify(data, null, 2))
-  return true
-})
+  fs.writeFileSync(configPath, JSON.stringify(data, null, 2));
+  return true;
+});
 
 ipcMain.handle('read-config', async () => {
   if (fs.existsSync(configPath)) {
-    const content = fs.readFileSync(configPath, 'utf-8')
-    return JSON.parse(content)
+    const content = fs.readFileSync(configPath, 'utf-8');
+    return JSON.parse(content);
   }
-  return null
-})
+  return null;
+});
 
 ipcMain.handle('choose-folder', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory'],
-  })
-  if (result.canceled || result.filePaths.length === 0) return null
-  return result.filePaths[0]
-})
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
 
 ipcMain.handle('save-file', async (_event, { chatId, buffer }) => {
   // Lê o caminho salvo no config
-  const configPath = path.join(app.getPath('userData'), 'config.json')
-  let downloadPath = app.getPath('downloads')
+  const configPath = path.join(app.getPath('userData'), 'config.json');
+  let downloadPath = app.getPath('downloads');
   if (fs.existsSync(configPath)) {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-    if (config.downloadPath) downloadPath = config.downloadPath
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    if (config.downloadPath) downloadPath = config.downloadPath;
   }
-  const filePath = path.join(downloadPath, `chat_${chatId}.zip`)
-  fs.writeFileSync(filePath, Buffer.from(buffer))
-  return true
-})
+  const filePath = path.join(downloadPath, `chat_${chatId}.zip`);
+  fs.writeFileSync(filePath, Buffer.from(buffer));
+  return true;
+});
 
 ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
   // Get the download path from config
@@ -71,7 +71,7 @@ ipcMain.handle('get-chat-files', async (_event, { chatId }) => {
 
   let jsonContent = null;
   let txtContent = '';
-  let fileList = [];
+  const fileList = [];
   let chatMetadata = null;
 
   for (const file of files) {
@@ -174,14 +174,14 @@ function formatConversationsFromJson(jsonData) {
 }
 
 // Apenas agendamentos semanais
-let scheduledWeeklyJobs = {}
+let scheduledWeeklyJobs = {};
 
 function getConfig() {
-  const configPath = path.join(app.getPath('userData'), 'config.json')
+  const configPath = path.join(app.getPath('userData'), 'config.json');
   if (fs.existsSync(configPath)) {
-    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
   }
-  return {}
+  return {};
 }
 
 // New function to check and handle cleaning
@@ -248,8 +248,8 @@ async function downloadBackups() {
   await checkAndHandleCleaning();
 
   // Then continue with regular backup
-  const config = getConfig()
-  if (!config.apiKey || !config.instanceUrl || !config.downloadPath) return
+  const config = getConfig();
+  if (!config.apiKey || !config.instanceUrl || !config.downloadPath) return;
 
   // 1. Buscar todos os chatIds encerrados usando o novo endpoint
   const idsRes = await fetch(
@@ -257,15 +257,15 @@ async function downloadBackups() {
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: config.apiKey })
+      body: JSON.stringify({ apiKey: config.apiKey }),
     }
-  )
-  if (!idsRes.ok) return
-  const idsObj = await idsRes.json()
-  const chatIds = idsObj || []
+  );
+  if (!idsRes.ok) return;
+  const idsObj = await idsRes.json();
+  const chatIds = idsObj || [];
 
   // 2. Baixar cada backup
-  const chatsleft = []
+  const chatsleft = [];
   for (const chatId of chatIds) {
     try {
       const backupRes = await fetch(
@@ -324,21 +324,21 @@ async function downloadBackups() {
 
 // Agendamento semanal
 ipcMain.handle('cancel-all-scheduled-weekly-backups', async () => {
-  Object.values(scheduledWeeklyJobs).forEach((job) => job && job.cancel())
-  scheduledWeeklyJobs = {}
-  return true
-})
+  Object.values(scheduledWeeklyJobs).forEach((job) => job && job.cancel());
+  scheduledWeeklyJobs = {};
+  return true;
+});
 
 ipcMain.handle('schedule-weekly-backup', async (_event, { weeklyDay, backupTime }) => {
   // Cancela o job antigo desse dia, se existir
-  if (scheduledWeeklyJobs[weeklyDay]) scheduledWeeklyJobs[weeklyDay].cancel()
-  const [hour, minute] = backupTime.split(':').map(Number)
+  if (scheduledWeeklyJobs[weeklyDay]) scheduledWeeklyJobs[weeklyDay].cancel();
+  const [hour, minute] = backupTime.split(':').map(Number);
   scheduledWeeklyJobs[weeklyDay] = schedule.scheduleJob(
     { dayOfWeek: Number(weeklyDay), hour, minute, tz: 'America/Sao_Paulo' },
     downloadBackups
-  )
-  return true
-})
+  );
+  return true;
+});
 
 ipcMain.handle('check-chat-downloaded', async (_event, { chatId }) => {
   const config = getConfig();
@@ -379,7 +379,7 @@ ipcMain.handle('get-downloaded-chats', async () => {
         id: chatId,
         downloadDate: stats.mtime,
         path: filePath,
-        type: file.endsWith('.zip') ? 'zip' : 'json'
+        type: file.endsWith('.zip') ? 'zip' : 'json',
       };
     }).sort((a, b) => b.downloadDate - a.downloadDate); // Most recent first
   } catch (err) {
@@ -560,5 +560,5 @@ app.on('before-quit', () => {
 });
 
 ipcMain.on('message', async (event, arg) => {
-  event.reply('message', `${arg} World!`)
-})
+  event.reply('message', `${arg} World!`);
+});

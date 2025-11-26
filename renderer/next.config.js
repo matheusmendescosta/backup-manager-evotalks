@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
-module.exports = {
+
+export default {
   output: 'export',
   distDir: process.env.NODE_ENV === 'production' ? '../app' : '.next',
   trailingSlash: true,
@@ -7,6 +8,6 @@ module.exports = {
     unoptimized: true,
   },
   webpack: (config) => {
-    return config
+    return config;
   },
-}
+};
