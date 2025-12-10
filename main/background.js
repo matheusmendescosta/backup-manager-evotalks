@@ -186,6 +186,29 @@ function getConfig() {
   return {};
 }
 
+// Função para restaurar os agendamentos salvos ao iniciar a aplicação
+function restoreScheduledBackups() {
+  const config = getConfig();
+  if (!config.weekSchedule) return;
+
+  for (const day of Object.keys(config.weekSchedule)) {
+    const schedule_config = config.weekSchedule[day];
+    if (schedule_config.enabled && schedule_config.time) {
+      try {
+        const [hour, minute] = schedule_config.time.split(':').map(Number);
+        scheduledWeeklyJobs[day] = schedule.scheduleJob(
+          { dayOfWeek: Number(day), hour, minute, tz: 'America/Sao_Paulo' },
+          downloadBackups
+        );
+
+        console.warn(`Agendamento restaurado para dia ${day} às ${schedule_config.time}`);
+      } catch (err) {
+        console.error(`Erro ao restaurar agendamento para dia ${day}:`, err);
+      }
+    }
+  }
+}
+
 // New function to check and handle cleaning
 async function checkAndHandleCleaning() {
   const config = getConfig();
@@ -455,6 +478,8 @@ ipcMain.handle('get-last-backup-date', async () => {
 
 ; (async () => {
   await app.whenReady();
+  // Restaurar agendamentos salvos
+  restoreScheduledBackups();
 
   app.setLoginItemSettings({
     openAtLogin: true,
