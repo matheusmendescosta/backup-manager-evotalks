@@ -568,7 +568,7 @@ ipcMain.handle('get-last-backup-date', async () => {
 
   // Improved icon paths for production
   const iconPath = isProd
-    ? path.join(process.resourcesPath, 'resources', 'icon.ico')
+    ? path.join(process.resourcesPath, 'icon.ico')
     // eslint-disable-next-line
     : path.join(__dirname, '..', 'resources', 'icon.ico');
 

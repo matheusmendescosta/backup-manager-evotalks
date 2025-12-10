@@ -9,4 +9,9 @@ files:
     filter:
       - package.json
       - app
+  - from: resources
+    to: resources
+    filter:
+      - "*.ico"
+      - "*.icns"
 publish: null
