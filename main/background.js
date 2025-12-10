@@ -264,6 +264,48 @@ async function checkAndHandleCleaning() {
   }
 }
 
+// Helper function to get date range for backup
+function getBackupDateRange() {
+  let endDate = new Date();
+
+  // Check if there are any backup files to determine the actual last backup date
+  const config = getConfig();
+  if (config.downloadPath && fs.existsSync(config.downloadPath)) {
+    try {
+      const files = fs.readdirSync(config.downloadPath)
+        .filter(f => f.startsWith('chat_') && (f.endsWith('.zip') || f.endsWith('.json')));
+
+      if (files.length > 0) {
+        let latestTime = 0;
+        for (const file of files) {
+          const filePath = path.join(config.downloadPath, file);
+          const stats = fs.statSync(filePath);
+          if (stats.mtime.getTime() > latestTime) {
+            latestTime = stats.mtime.getTime();
+          }
+        }
+        if (latestTime > 0) {
+          endDate = new Date(latestTime);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao obter data do último backup:', err);
+    }
+  }
+
+  // startDate is the day before endDate
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - 1);
+
+  // Format both dates as ISO 8601 (YYYY-MM-DD) at 00:00:00
+  const formatDate = (date) => date.toISOString().split('T')[0];
+
+  return {
+    startDate: formatDate(startDate),
+    endDate: formatDate(endDate),
+  };
+}
+
 // Modificar a função downloadBackups existente
 async function downloadBackups() {
   // First check for cleaning
@@ -273,13 +315,20 @@ async function downloadBackups() {
   const config = getConfig();
   if (!config.apiKey || !config.instanceUrl || !config.downloadPath) return;
 
+  // Get date range for the request
+  const { startDate, endDate } = getBackupDateRange();
+
   // 1. Buscar todos os chatIds encerrados usando o novo endpoint
   const idsRes = await fetch(
     `https://${config.instanceUrl}/int/getAllChatsClosedYesterday`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: config.apiKey }),
+      body: JSON.stringify({
+        apiKey: config.apiKey,
+        startDate,
+        endDate,
+      }),
     }
   );
   if (!idsRes.ok) return;
