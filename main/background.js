@@ -6,6 +6,7 @@ import { createWindow } from './helpers';
 import fetch from 'node-fetch';
 import schedule from 'node-schedule';
 import AdmZip from 'adm-zip';
+import PDFDocument from 'pdfkit';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -525,6 +526,21 @@ ipcMain.handle('get-last-backup-date', async () => {
   }
 });
 
+ipcMain.handle('show-message', async (_event, { type, title, message }) => {
+  try {
+    await dialog.showMessageBox(mainWindow, {
+      type: type === 'error' ? 'error' : 'info',
+      title: title || 'Mensagem',
+      message: message || '',
+      buttons: ['OK'],
+    });
+    return true;
+  } catch (err) {
+    console.error('Erro ao exibir mensagem:', err);
+    return false;
+  }
+});
+
 ; (async () => {
   await app.whenReady();
   // Restaurar agendamentos salvos
@@ -633,4 +649,165 @@ app.on('before-quit', () => {
 
 ipcMain.on('message', async (event, arg) => {
   event.reply('message', `${arg} World!`);
+});
+
+ipcMain.handle('export-chat-pdf', async (_event, { chatId, header, messages }) => {
+  try {
+    // Permitir que o usuário escolha onde salvar o PDF
+    const result = await dialog.showSaveDialog({
+      title: 'Exportar conversa como PDF',
+      defaultPath: `chat_${chatId}.pdf`,
+      filters: [
+        { name: 'PDF', extensions: ['pdf'] },
+      ],
+    });
+
+    if (result.canceled || !result.filePath) {
+      return false;
+    }
+
+    const pdfPath = result.filePath;
+
+    // Criar o PDF
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const stream = fs.createWriteStream(pdfPath);
+    doc.pipe(stream);
+
+    // Título do documento
+    doc.fontSize(20)
+      .fillColor('#166534')
+      .text(`Chat #${header.meta}`, { align: 'center' })
+      .moveDown(0.5);
+
+    // Informações do cabeçalho
+    doc.fontSize(10)
+      .fillColor('#000000');
+
+    if (header.queueType) {
+      doc.text(`Tipo: ${header.queueType}`, { align: 'center' })
+        .moveDown(0.3);
+    }
+
+    doc.fontSize(9);
+    if (header.clientName) {
+      doc.text(`Cliente: ${header.clientName}`);
+    }
+    if (header.clientNumber) {
+      doc.text(`Número: ${header.clientNumber}`);
+    }
+    if (header.clientId) {
+      doc.text(`ID do Cliente: ${header.clientId}`);
+    }
+    if (header.beginTime) {
+      doc.text(`Início: ${new Date(header.beginTime).toLocaleString('pt-BR')}`);
+    }
+    if (header.endTime) {
+      doc.text(`Término: ${new Date(header.endTime).toLocaleString('pt-BR')}`);
+    }
+
+    doc.moveDown(1);
+    doc.strokeColor('#166534')
+      .lineWidth(1)
+      .moveTo(50, doc.y)
+      .lineTo(545, doc.y)
+      .stroke();
+    doc.moveDown(1.5);
+
+    // Mensagens
+    for (const msg of messages) {
+      // Verifica se há espaço suficiente na página
+      if (doc.y > 680) {
+        doc.addPage();
+      }
+
+      const isIncoming = msg.direction === 'in';
+      const isSystem = msg.direction === 'system';
+
+      if (isSystem) {
+        // Mensagem do sistema - centralizada com fundo cinza
+        const systemText = msg.text || '';
+        doc.fontSize(8)
+          .fillColor('#6B7280');
+
+        const textWidth = doc.widthOfString(systemText);
+        const boxWidth = Math.min(textWidth + 20, 400);
+        const xPosition = (doc.page.width - boxWidth) / 2;
+
+        doc.roundedRect(xPosition, doc.y - 2, boxWidth, 20, 3)
+          .fillAndStroke('#F3F4F6', '#E5E7EB');
+
+        doc.fillColor('#6B7280')
+          .text(systemText, xPosition + 10, doc.y + 5, {
+            width: boxWidth - 20,
+            align: 'center',
+          })
+          .moveDown(1.5);
+      } else {
+        // Mensagens normais - estilo bolha de chat
+        const sender = isIncoming ? 'Cliente' : 'Agente';
+        const messageText = (msg.file && msg.file.fileName)
+          ? `📎 ${msg.file.fileName}`
+          : (msg.text || '');
+
+        const timestamp = new Date(msg.time).toLocaleString('pt-BR');
+
+        // Configurações de cor e posição baseadas na direção
+        const bgColor = isIncoming ? '#F0FDF4' : '#EFF6FF';
+        const borderColor = isIncoming ? '#22C55E' : '#3B82F6';
+        const textColor = '#000000';
+        const senderColor = isIncoming ? '#166534' : '#1E40AF';
+
+        // Margens laterais para simular alinhamento de bolhas
+        const leftMargin = isIncoming ? 60 : 120;
+        const rightMargin = isIncoming ? 120 : 60;
+        const maxWidth = doc.page.width - leftMargin - rightMargin;
+
+        // Calcular altura necessária
+        doc.fontSize(9);
+        const textHeight = doc.heightOfString(messageText, { width: maxWidth - 20 });
+        const boxHeight = textHeight + 35;
+
+        // Desenhar retângulo da mensagem
+        doc.roundedRect(leftMargin, doc.y, maxWidth, boxHeight, 5)
+          .fillAndStroke(bgColor, borderColor);
+
+        // Nome do remetente e timestamp
+        doc.fontSize(7)
+          .fillColor(senderColor)
+          .font('Helvetica-Bold')
+          .text(sender, leftMargin + 10, doc.y + 8, {
+            width: maxWidth - 20,
+            continued: true,
+          })
+          .fillColor('#6B7280')
+          .font('Helvetica')
+          .text(` • ${timestamp}`, { width: maxWidth - 20 });
+
+        // Texto da mensagem
+        doc.fontSize(9)
+          .fillColor(textColor)
+          .font('Helvetica')
+          .text(messageText, leftMargin + 10, doc.y + 3, {
+            width: maxWidth - 20,
+            align: 'left',
+          });
+
+        doc.moveDown(1.2);
+      }
+    }
+
+    // Finalizar o PDF
+    doc.end();
+
+    // Aguardar a conclusão da escrita
+    await new Promise((resolve, reject) => {
+      stream.on('finish', resolve);
+      stream.on('error', reject);
+    });
+
+    return true;
+  } catch (err) {
+    console.error('Erro ao exportar PDF:', err);
+    return false;
+  }
 });

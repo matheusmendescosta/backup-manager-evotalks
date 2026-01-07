@@ -2,7 +2,7 @@
   "private": true,
   "name": "evotalks-backup-manager",
   "description": "Gerenciador de Backups para Evotalks",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "author": "Matheus Mendes <matheus.mendes@evotalks.com.br>",
   "main": "app/background.js",
   "scripts": {
@@ -19,6 +19,7 @@
     "lucide-react": "^0.544.0",
     "node-fetch": "^3.3.2",
     "node-schedule": "^2.1.1",
+    "pdfkit": "^0.17.2",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

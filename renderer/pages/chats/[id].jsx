@@ -1,6 +1,6 @@
 'use client';
 // eslint-disable-next-line no-unused-vars
-import { FileArchive, Image, FileText, File, ExternalLink } from 'lucide-react';
+import { ExternalLink, File, FileArchive, FileDown, FileText, Image } from 'lucide-react';
 // eslint-disable-next-line
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -15,6 +15,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   // Modify the useEffect message parsing
   useEffect(() => {
@@ -58,6 +59,40 @@ export default function ChatPage() {
     }
     setLoading(false);
   }, [id]);
+
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const success = await window.ipc.invoke('export-chat-pdf', {
+        chatId: id,
+        header,
+        messages,
+      });
+
+      if (success) {
+        await window.ipc.invoke('show-message', {
+          type: 'info',
+          title: 'Sucesso',
+          message: 'PDF exportado com sucesso!',
+        });
+      } else {
+        await window.ipc.invoke('show-message', {
+          type: 'error',
+          title: 'Erro',
+          message: 'Erro ao exportar PDF',
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao exportar PDF:', err);
+      await window.ipc.invoke('show-message', {
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao exportar PDF',
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -105,12 +140,23 @@ export default function ChatPage() {
                 </p>
               )}
             </div>
-            <Link
-              href="/Dashboard"
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
-            >
-              Voltar
-            </Link>
+            <div className="flex gap-2">
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting}
+                className={twMerge('px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex',
+                  'items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed')}
+              >
+                <FileDown className="w-4 h-4" />
+                {exporting ? 'Exportando...' : 'Exportar PDF'}
+              </button>
+              <Link
+                href="/Dashboard"
+                className={twMerge('px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium')}
+              >
+                Voltar
+              </Link>
+            </div>
           </div>
 
           <div className="border-t border-green-200 pt-2 mt-2 text-xs text-green-700 grid grid-cols-2 gap-2">
